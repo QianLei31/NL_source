@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QJsonObject>
 #include <QString>
 #include <QVector>
 
@@ -9,6 +10,13 @@ struct SessionPartInfo {
     QString fileName;
     qint64 bytes{0};
     qint64 frames{0};
+};
+
+// Half-open interval in concatenated recorded-file frames, never hardware or
+// source indices. A split or seek therefore cannot move a validity boundary.
+struct SessionFrameRange {
+    qint64 startFrame{0};
+    qint64 frameCount{0};
 };
 
 struct SessionMetadata {
@@ -26,6 +34,7 @@ struct SessionMetadata {
     bool tdmKnown{false};
     bool tdmEnabled{false};
     bool tdmEvenFirst{true};
+    QJsonObject neuralAnalysis;
 };
 
 struct SessionIntegrity {
@@ -47,6 +56,9 @@ struct SessionManifestData {
     qint64 ingressDroppedFrames{0};
     qint64 recordingDroppedFrames{0};
     SessionIntegrity integrity;
+    bool frameValidityKnown{false};
+    bool integrityUnknown{false};
+    QVector<SessionFrameRange> invalidFrameRanges;
     bool active{false};
     bool complete{false};
     QString stopReason;
@@ -63,6 +75,10 @@ struct SessionInput {
     QVector<SessionInputPart> parts;
     SessionMetadata metadata;
     bool hasManifest{false};
+    bool frameValidityKnown{false};
+    bool integrityUnknown{false};
+    bool integrityComplete{false};
+    QVector<SessionFrameRange> invalidFrameRanges;
     qint64 totalFrames{0};
     qint64 ignoredTailBytes{0};
     QString warning;
@@ -70,6 +86,7 @@ struct SessionInput {
 
 class SessionManifest {
 public:
+    static constexpr qsizetype kMaxValidityRanges = 65536;
     static bool resolveInput(const QString &path, double fallbackSampleRate,
                              SessionInput *input, QString *error = nullptr);
     static bool write(const QString &folderPath,

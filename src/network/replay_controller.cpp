@@ -12,8 +12,20 @@ namespace ccv2 {
 namespace {
 constexpr int kTickMs = 25;
 constexpr qint64 kIndexStride = 4096;
-quint32 timestampAt(const char *frame) {
-    return (qFromLittleEndian<quint32>(frame) >> kTimestampShift) & 0xFFFFFu;
+bool frameIsInvalid(const QVector<SessionFrameRange> &ranges, qint64 frame) {
+    const auto it = std::upper_bound(ranges.cbegin(), ranges.cend(), frame,
+        [](qint64 value, const SessionFrameRange &range) { return value < range.startFrame; });
+    if (it == ranges.cbegin()) return false;
+    const auto &range = *(it - 1);
+    return frame - range.startFrame < range.frameCount;
+}
+qint64 advanceFileFrame(FrameTimestampReconciler &timeline, const char *frame, bool invalid) {
+    if (invalid) {
+        const qint64 index = timeline.nextIndex();
+        timeline.skipFrames(1); // Synthetic zeros must not reset timestamp phase.
+        return index;
+    }
+    return timeline.advance((qFromLittleEndian<quint32>(frame) >> kTimestampShift) & 0xFFFFFu);
 }
 }
 
@@ -50,6 +62,12 @@ void ReplayController::close() {
     m_checkpoints.clear();
     m_partIndex = -1;
     m_sourcePath.clear();
+    m_metadata = {};
+    m_sourceProvenance = {};
+    m_frameValidityKnown = false;
+    m_integrityComplete = false;
+    m_integrityUnknown = false;
+    m_invalidFrameRanges.clear();
     m_warning.clear();
     m_error.clear();
     m_totalFrames = m_curFrame = 0;
@@ -138,13 +156,14 @@ void ReplayController::seekFrame(qint64 frame) {
     m_seekCancel = std::make_shared<std::atomic_bool>(false);
     const auto cancel = m_seekCancel;
     const auto parts = m_parts;
+    const auto invalidRanges = m_invalidFrameRanges;
     const qint64 beginFrame = checkpoint.key();
     const auto beginTimeline = checkpoint.value();
     const quint64 generation = m_seekGeneration;
     QPointer<ReplayController> self(this);
     // Scan only the not-yet-indexed prefix off-thread, retaining sparse
     // checkpoints instead of loading the whole recording into memory.
-    m_seekFuture = QtConcurrent::run([self, cancel, parts, beginFrame, beginTimeline, frame, generation]() {
+    m_seekFuture = QtConcurrent::run([self, cancel, parts, invalidRanges, beginFrame, beginTimeline, frame, generation]() {
         auto timeline = beginTimeline;
         qint64 cursor = beginFrame;
         QMap<qint64, FrameTimestampReconciler> added;
@@ -167,7 +186,8 @@ void ReplayController::seekFrame(qint64 frame) {
                 }
                 for (qint64 f = 0; f < count; ++f, ++cursor) {
                     if (cursor % kIndexStride == 0) added.insert(cursor, timeline);
-                    timeline.advance(timestampAt(bytes.constData() + f * kFrameBytes));
+                    advanceFileFrame(timeline, bytes.constData() + f * kFrameBytes,
+                                     frameIsInvalid(invalidRanges, cursor));
                 }
             }
             if (!error.isEmpty()) break;
@@ -191,7 +211,20 @@ void ReplayController::jumpToEnd() { seekFrame(m_totalFrames); }
 bool ReplayController::loadParts(const QString &path, double fallbackRate) {
     SessionInput input;
     if (!SessionManifest::resolveInput(path, fallbackRate, &input, &m_error)) return false;
+    SessionManifestData manifest;
+    const bool manifestRead = input.hasManifest && SessionManifest::read(path, &manifest);
+    m_sourceProvenance = QJsonObject{
+        {"has_manifest", input.hasManifest}, {"frame_validity_known", input.frameValidityKnown},
+        {"integrity_complete", input.integrityComplete}, {"integrity_unknown", input.integrityUnknown},
+        {"original_complete", manifestRead && manifest.complete},
+        {"ignored_tail_bytes", QString::number(input.ignoredTailBytes)},
+        {"warning", input.warning}};
     m_parts = input.parts;
+    m_metadata = input.metadata;
+    m_frameValidityKnown = input.frameValidityKnown;
+    m_integrityComplete = input.integrityComplete;
+    m_integrityUnknown = input.integrityUnknown;
+    m_invalidFrameRanges = input.invalidFrameRanges;
     m_totalFrames = input.totalFrames;
     m_fs = input.metadata.sampleRate;
     m_tdmKnown = input.hasManifest && input.metadata.tdmKnown;
@@ -279,10 +312,16 @@ void ReplayController::tick() {
         }
         m_pendingFrames = count;
         m_pendingInfo.epoch = m_epoch;
+        m_pendingInfo.integrityUnknown = m_integrityUnknown;
+        const bool hasMask = m_frameValidityKnown || !m_invalidFrameRanges.isEmpty();
+        if (hasMask) m_pendingInfo.frameValid.reserve(static_cast<qsizetype>(count));
         m_pendingInfo.frameIndices.reserve(static_cast<qsizetype>(count));
         for (qint64 f = 0; f < count; ++f) {
             if ((m_curFrame + f) % kIndexStride == 0) m_checkpoints.insert(m_curFrame + f, m_readerTimeline);
-            m_pendingInfo.frameIndices.push_back(m_readerTimeline.advance(timestampAt(m_pendingChunk.constData() + f * kFrameBytes)));
+            const bool invalid = frameIsInvalid(m_invalidFrameRanges, m_curFrame + f);
+            if (hasMask) m_pendingInfo.frameValid.push_back(!invalid);
+            m_pendingInfo.frameIndices.push_back(advanceFileFrame(
+                m_readerTimeline, m_pendingChunk.constData() + f * kFrameBytes, invalid));
         }
         if (!deliverPending()) break;
     }

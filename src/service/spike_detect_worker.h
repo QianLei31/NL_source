@@ -60,13 +60,14 @@ protected:
 private:
     struct LaneState {
         QVector<double> hist;      // filtered samples, lane-local
+        QVector<qint64> frames;   // exact source coordinate for each hist sample
         qint64 histStart = 0;      // lane-sample index of hist[0]
         qint64 total = 0;          // lane samples ever seen
         QVector<qint64> pending;   // trigger indices awaiting post-samples
     };
 
-    void resetLanes();
-    void feedLane(int lane, const QVector<double> &samples);
+    void resetLanes(bool accountDiscarded = true);
+    void feedLane(int lane, const QVector<double> &samples, const QVector<qint64> &frames);
     void publishStats();
     void applyThresholdOverrides();
 
@@ -81,6 +82,7 @@ private:
     int m_lanes = 0;
     QByteArray m_leftover;
     quint64 m_lastEpoch{0};
+    quint64 m_continuitySegment{0};
     qint64 m_nextFrameIndex{0};
     FrameTimestampReconciler m_tsRecon;
     SpikeProcessor m_proc;

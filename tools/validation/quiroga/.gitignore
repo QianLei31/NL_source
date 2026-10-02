@@ -1,0 +1,10 @@
+Simulator.zip
+figshare_article.json
+detector_harness
+traces/
+truth/
+events/
+results.json
+results.csv
+metric_checks.json
+validation_input_sha256.txt

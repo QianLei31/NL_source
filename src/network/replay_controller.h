@@ -43,6 +43,12 @@ public:
     bool tdmEnabled() const { return m_tdmEnabled; }
     bool tdmEvenFirst() const { return m_tdmEvenFirst; }
     QString sourcePath() const { return m_sourcePath; }
+    const SessionMetadata &metadata() const { return m_metadata; }
+    QJsonObject sourceProvenance() const { return m_sourceProvenance; }
+    bool frameValidityKnown() const { return m_frameValidityKnown; }
+    bool integrityComplete() const { return m_integrityComplete; }
+    bool integrityUnknown() const { return m_integrityUnknown; }
+    const QVector<SessionFrameRange> &invalidFrameRanges() const { return m_invalidFrameRanges; }
     QString warning() const { return m_warning; }
     QString errorString() const { return m_error; }
     bool isSeeking() const { return m_seeking; }
@@ -87,6 +93,12 @@ private:
     QVector<ReplayPart> m_parts;
     int m_partIndex{-1};
     QString m_sourcePath;
+    SessionMetadata m_metadata;
+    QJsonObject m_sourceProvenance;
+    bool m_frameValidityKnown{false};
+    bool m_integrityComplete{false};
+    bool m_integrityUnknown{false};
+    QVector<SessionFrameRange> m_invalidFrameRanges;
     QString m_warning;
     QString m_error;
     double m_fs = 20000.0;

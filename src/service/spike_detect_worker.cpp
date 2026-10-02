@@ -79,13 +79,17 @@ void SpikeDetectWorker::applyThresholdOverrides() {
     m_appliedThresholdOverrideRevision = revision;
 }
 
-void SpikeDetectWorker::resetLanes() {
+void SpikeDetectWorker::resetLanes(bool accountDiscarded) {
+    for (int lane = 0; lane < m_lane.size(); ++lane) {
+        if (accountDiscarded) m_store->addBoundaryExcludedIfEpoch(m_lane[lane].pending.size(), m_lastEpoch);
+        m_store->setPendingWindowCountIfEpoch(lane, 0, m_lastEpoch);
+    }
     m_lane.clear();
     m_lane.resize(m_lanes);
 }
 
-void SpikeDetectWorker::feedLane(int lane, const QVector<double> &samples) {
-    if (samples.isEmpty() || lane < 0 || lane >= m_lane.size()) return;
+void SpikeDetectWorker::feedLane(int lane, const QVector<double> &samples, const QVector<qint64> &frames) {
+    if (samples.isEmpty() || samples.size() != frames.size() || lane < 0 || lane >= m_lane.size()) return;
     LaneState &st = m_lane[lane];
 
     QVector<double> disp;
@@ -94,12 +98,14 @@ void SpikeDetectWorker::feedLane(int lane, const QVector<double> &samples) {
 
     const qint64 batchStart = st.total;
     st.hist.append(disp);
+    st.frames.append(frames);
     for (int i = 0; i < flags.size(); ++i) {
         if (flags[i]) {
             st.pending.push_back(batchStart + i);
         }
     }
     st.total += samples.size();
+    m_store->addCoverageIfEpoch(lane, samples.size(), frames.first(), frames.last(), m_lastEpoch);
 
     const int len = snippetLength();
     const qint64 histEnd = st.histStart + st.hist.size();  // one past the last
@@ -110,19 +116,33 @@ void SpikeDetectWorker::feedLane(int lane, const QVector<double> &samples) {
             break;  // post-samples have not arrived yet; keep this and the rest
         }
         if (t - m_cfg.preSamples < st.histStart) {
-            ++consumed;  // history already trimmed past it (should not happen)
+            m_store->addBoundaryExcludedIfEpoch(1, m_lastEpoch);
+            ++consumed;  // pre-window crosses the start of this valid segment
             continue;
         }
         const qsizetype from = static_cast<qsizetype>(t - m_cfg.preSamples - st.histStart);
         for (int k = 0; k < len; ++k) {
             m_snippetScratch[k] = static_cast<float>(st.hist[from + k]);
         }
-        m_store->addSnippetIfEpoch(lane, m_snippetScratch.constData(), m_lastEpoch);
+        SpikeEvent event;
+        event.epoch = m_lastEpoch;
+        event.continuitySegment = m_continuitySegment;
+        event.sourceFrame = st.frames[static_cast<qsizetype>(t - st.histStart)];
+        event.sampleStride = m_cfg.tdmEnabled ? kTdmPhaseCount : 1;
+        event.sourceSampleRate = m_cfg.proc.sampleRate * event.sampleStride;
+        event.inputGain = m_cfg.inputGain;
+        event.adcChannel = m_cfg.tdmEnabled ? lane / 2 : lane;
+        event.tdmPhase = m_cfg.tdmEnabled ? tdmPhaseForFrame(event.sourceFrame) : -1;
+        event.electrode = m_cfg.tdmEnabled ? event.adcChannel * kTdmPhaseCount + event.tdmPhase : lane;
+        event.preSamples = m_cfg.preSamples;
+        m_store->addEventIfEpoch(lane, m_snippetScratch.constData(), event);
         ++consumed;
     }
     if (consumed > 0) {
         st.pending.remove(0, consumed);
     }
+
+    m_store->setPendingWindowCountIfEpoch(lane, st.pending.size(), m_lastEpoch);
 
     // Trim the history to what a future snippet could still need: either the
     // oldest waiting trigger's pre-window, or just `pre` samples of lead-in.
@@ -132,6 +152,7 @@ void SpikeDetectWorker::feedLane(int lane, const QVector<double> &samples) {
     const qint64 keepFrom = qBound<qint64>(st.histStart, needFrom, st.histStart + st.hist.size());
     if (keepFrom > st.histStart) {
         st.hist.remove(0, static_cast<qsizetype>(keepFrom - st.histStart));
+        st.frames.remove(0, static_cast<qsizetype>(keepFrom - st.histStart));
         st.histStart = keepFrom;
     }
 }
@@ -155,6 +176,18 @@ void SpikeDetectWorker::run() {
     QVector<double> frameValues(kChannelsTotal, 0.0);
     std::vector<double> medianScratch(kChannelsTotal);
     QVector<QVector<double>> laneSamples(m_lanes);
+    QVector<QVector<qint64>> laneFrames(m_lanes);
+    const auto flushLanes = [&]() {
+        if (m_timelineEpoch && m_lastEpoch != m_timelineEpoch->load()) return;
+        applyThresholdOverrides();
+        for (int lane = 0; lane < m_lanes; ++lane) {
+            if (m_stopFlag && m_stopFlag->load()) break;
+            if (m_timelineEpoch && m_lastEpoch != m_timelineEpoch->load()) break;
+            feedLane(lane, laneSamples[lane], laneFrames[lane]);
+            laneSamples[lane].clear();
+            laneFrames[lane].clear();
+        }
+    };
 
     while (!(m_stopFlag && m_stopFlag->load())) {
         const quint64 waitingEpoch = m_timelineEpoch ? m_timelineEpoch->load() : 0;
@@ -170,18 +203,24 @@ void SpikeDetectWorker::run() {
 
         const quint64 epoch = info.valid() ? info.epoch : waitingEpoch;
         if (m_timelineEpoch && epoch != m_timelineEpoch->load()) continue;
-        if (epoch != m_lastEpoch || droppedBytes > 0 ||
+        const bool timelineChanged = epoch != m_lastEpoch;
+        if (timelineChanged || droppedBytes > 0 ||
             (info.valid() && info.firstFrame() != m_nextFrameIndex)) {
             if (epoch != m_lastEpoch) {
                 m_nextFrameIndex = m_timelineFrameOrigin ? m_timelineFrameOrigin->load() : 0;
-            } else if (!info.valid()) {
-                m_nextFrameIndex += droppedBytes / kFrameBytes;
+                m_continuitySegment = 0;
+            } else {
+                const qint64 missing = info.valid() ? qMax<qint64>(0, info.firstFrame() - m_nextFrameIndex)
+                                                     : droppedBytes / kFrameBytes;
+                m_store->markDiscontinuityIfEpoch(missing, droppedBytes / kFrameBytes, 0, epoch);
+                ++m_continuitySegment;
+                if (!info.valid()) m_nextFrameIndex += droppedBytes / kFrameBytes;
             }
             m_lastEpoch = epoch;
             if (info.valid()) m_nextFrameIndex = info.firstFrame();
             m_leftover.clear();
             m_proc.reset();
-            resetLanes();
+            resetLanes(!timelineChanged);
             m_tsRecon.reset(m_nextFrameIndex);
         }
 
@@ -194,10 +233,21 @@ void SpikeDetectWorker::run() {
         m_leftover.remove(0, completeBytes);
         const int frameCount = payload.size() / kFrameBytes;
         if (info.valid() && info.frameIndices.size() != frameCount) continue;
-
-        for (QVector<double> &v : laneSamples) {
-            v.clear();
+        if (info.integrityUnknown || (!info.frameValid.isEmpty() && info.frameValid.size() != frameCount)) {
+            // Legacy damaged recordings without exact invalid intervals cannot
+            // be safely interpreted as neural signal. Keep raw replay usable,
+            // but explicitly exclude this block from neural exposure/events.
+            m_store->markDiscontinuityIfEpoch(0, 0, frameCount, epoch);
+            ++m_continuitySegment;
+            m_proc.reset();
+            resetLanes();
+            if (info.valid()) m_nextFrameIndex = info.nextFrame();
+            continue;
         }
+
+        if (info.frameValid.isEmpty()) m_store->markUnverifiedFramesIfEpoch(frameCount, epoch);
+        for (QVector<double> &v : laneSamples) v.clear();
+        for (QVector<qint64> &v : laneFrames) v.clear();
 
         const int refMode = m_referenceMode ? m_referenceMode->load() : 0;
         const uchar *base = reinterpret_cast<const uchar *>(payload.constData());
@@ -206,13 +256,35 @@ void SpikeDetectWorker::run() {
             const uchar *frame = base + static_cast<qsizetype>(f) * kFrameBytes;
             const quint32 ts0 =
                 (qFromLittleEndian<quint32>(frame) >> kTimestampShift) & 0xFFFFFu;
-            const qint64 absFrame = info.valid() ? info.frameIndices[f] : m_tsRecon.advance(ts0);
+            bool frameValid = info.frameValid.isEmpty() || info.frameValid[f];
+            for (int ch = 1; frameValid && ch < kChannelsTotal; ++ch) {
+                const quint32 timestamp = qFromLittleEndian<quint32>(frame + ch * kBytesPerPoint) >> kTimestampShift;
+                frameValid = timestamp == ts0;
+            }
+            qint64 absFrame;
+            if (info.valid()) absFrame = info.frameIndices[f];
+            else if (frameValid) absFrame = m_tsRecon.advance(ts0);
+            else { absFrame = m_tsRecon.nextIndex(); m_tsRecon.skipFrames(1); }
             if (absFrame != m_nextFrameIndex) {
+                // Preserve complete pre-gap events, but never join a waveform
+                // or detector history across missing source frames.
+                flushLanes();
+                m_store->markDiscontinuityIfEpoch(qMax<qint64>(0, absFrame - m_nextFrameIndex), 0, 0, epoch);
+                ++m_continuitySegment;
                 m_proc.reset();
                 resetLanes();
                 for (auto &samples : laneSamples) samples.clear();
+                for (auto &frames : laneFrames) frames.clear();
             }
             m_nextFrameIndex = absFrame + 1;
+            if (!frameValid) {
+                flushLanes();
+                m_store->markDiscontinuityIfEpoch(0, 0, 1, epoch);
+                ++m_continuitySegment;
+                m_proc.reset();
+                resetLanes();
+                continue;
+            }
 
             for (int ch = 0; ch < kChannelsTotal; ++ch) {
                 const quint32 raw =
@@ -243,24 +315,19 @@ void SpikeDetectWorker::run() {
                 if (slot >= 0) {
                     for (int ch = 0; ch < kChannelsTotal; ++ch) {
                         laneSamples[ch * 2 + slot].push_back(frameValues[ch] - reference);
+                        laneFrames[ch * 2 + slot].push_back(absFrame);
                     }
                 }
             } else {
                 for (int ch = 0; ch < kChannelsTotal; ++ch) {
                     laneSamples[ch].push_back(frameValues[ch] - reference);
+                    laneFrames[ch].push_back(absFrame);
                 }
             }
         }
 
         if (m_timelineEpoch && epoch != m_timelineEpoch->load()) continue;
-        applyThresholdOverrides();
-        for (int lane = 0; lane < m_lanes; ++lane) {
-            if (m_stopFlag && m_stopFlag->load()) {
-                return;
-            }
-            if (m_timelineEpoch && epoch != m_timelineEpoch->load()) break;
-            feedLane(lane, laneSamples[lane]);
-        }
+        flushLanes();
 
         pendingProgress += frameCount;
         if (progressTimer.elapsed() >= 200) {

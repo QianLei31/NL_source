@@ -25,6 +25,7 @@ public:
     bool startAndWait(int timeoutMs = 5000);
     bool enqueue(const QByteArray &chunk, const StreamBlockInfo &info = {});
     void setIntegrity(const SessionIntegrity &integrity, qint64 ingressDroppedFrames);
+    void setAnalysisMetadata(const QJsonObject &metadata);
     bool integrityClean() const;
     qint64 ingressDroppedFrames() const;
     void requestStop(bool complete,

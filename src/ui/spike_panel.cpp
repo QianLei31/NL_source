@@ -7,7 +7,10 @@
 #include <QDoubleSpinBox>
 #include <QGroupBox>
 #include <QHBoxLayout>
+#include <QFileDialog>
+#include <QJsonArray>
 #include <QLabel>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QSizePolicy>
 #include <QSpinBox>
@@ -19,9 +22,11 @@
 #include "core/channel_routing.h"
 #include "core/constants.h"
 #include "core/tdm_context.h"
+#include "io/spike_event_exporter.h"
 #include "service/session_hub.h"
 #include "ui/widgets/spike_detail_window.h"
 #include "ui/widgets/spike_grid_view.h"
+#include "ui/widgets/spike_sorting_widget.h"
 
 namespace ccv2 {
 
@@ -210,20 +215,42 @@ void SpikePanel::buildUi() {
     vbar->addWidget(m_columnsSpin);
 
     m_btnPause = new QPushButton(QStringLiteral("暂停显示"));
+    m_btnPause->setObjectName(QStringLiteral("spikePauseDisplay"));
+    m_btnPause->setToolTip(QStringLiteral("仅暂停波形刷新；后台神经分析、采集与录制继续运行"));
     m_btnPause->setProperty("variant", "secondary");
     m_btnPause->setCheckable(true);
     vbar->addWidget(m_btnPause);
     m_btnClear = new QPushButton(QStringLiteral("清空留存"));
     m_btnClear->setProperty("variant", "secondary");
+    m_btnClear->setToolTip(QStringLiteral("清空留存并重启分析统计区间；不会停止采集或录制"));
     vbar->addWidget(m_btnClear);
+    auto *sortingButton = new QPushButton(QStringLiteral("分选 / 质量"));
+    sortingButton->setObjectName(QStringLiteral("spikeSortingWorkspace"));
+    sortingButton->setProperty("variant", "secondary");
+    sortingButton->setToolTip(QStringLiteral("在当前会话内查看特征、源时间 raster、ISI，并手动标记候选单元；仅限留存窗口"));
+    vbar->addWidget(sortingButton);
+    m_btnExport = new QPushButton(QStringLiteral("导出选中电极"));
+    m_btnExport->setObjectName(QStringLiteral("spikeExportLane"));
+    m_btnExport->setProperty("variant", "secondary");
+    m_btnExport->setEnabled(false);
+    m_btnExport->setToolTip(QStringLiteral("先点击一个电极，再导出其留存事件、波形、候选标签及分析参数 JSON；不是完整事件录制"));
+    vbar->addWidget(m_btnExport);
     vbar->addStretch(1);
     m_status = new QLabel(QStringLiteral("状态: 未开始"));
+    m_status->setObjectName(QStringLiteral("spikeAnalysisStatus"));
     m_status->setProperty("role", "status-line");
     m_status->setProperty("state", "warn");
-    m_status->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    m_status->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    m_status->setWordWrap(true);
     m_status->setMinimumWidth(0);
-    vbar->addWidget(m_status);
     root->addWidget(viewOpts);
+    root->addWidget(m_status);
+
+    m_qualityStatus = new QLabel(QStringLiteral("分析随采集或回放自动启动；切换页面不停止分析。频率按已分析的源时间计算"));
+    m_qualityStatus->setObjectName(QStringLiteral("spikeAnalysisQuality"));
+    m_qualityStatus->setProperty("role", "caption");
+    m_qualityStatus->setWordWrap(true);
+    root->addWidget(m_qualityStatus);
 
     // --- full-array grid ---------------------------------------------------
     auto *gridWrap = new QWidget;
@@ -236,7 +263,7 @@ void SpikePanel::buildUi() {
     auto *gridHint = new QLabel(
         QStringLiteral("每格 = 一个电极；点击后在独立窗口查看并调整该通道阈值"));
     gridHint->setProperty("role", "caption");
-    gridHint->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    gridHint->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
     gridHint->setMinimumWidth(0);
     auto *gridHeader = new QHBoxLayout;
     gridHeader->addWidget(gridTitle);
@@ -254,6 +281,15 @@ void SpikePanel::buildUi() {
     m_grid->setStore(&m_store);
     m_detailWindow = new SpikeDetailWindow(this);
     m_detailWindow->setStore(&m_store);
+    m_sortingWindow = new SpikeSortingWidget(&m_store, this);
+    connect(sortingButton, &QPushButton::clicked, this, [this]() {
+        m_sortingWindow->setLane(qMax(0, m_selectedLane));
+        m_sortingWindow->refreshData();
+        m_sortingWindow->show();
+        m_sortingWindow->raise();
+        m_sortingWindow->activateWindow();
+    });
+    connect(m_btnExport, &QPushButton::clicked, this, &SpikePanel::exportSelectedLane);
     updateLaneLabels();
 
     connect(m_grid, &SpikeGridView::laneClicked,
@@ -307,6 +343,7 @@ void SpikePanel::buildUi() {
     connect(m_btnPause, &QPushButton::toggled, this, [this](bool on) {
         m_paused = on;
         m_btnPause->setText(on ? QStringLiteral("继续显示") : QStringLiteral("暂停显示"));
+        refresh();
     });
     connect(m_btnClear, &QPushButton::clicked, this, &SpikePanel::clearAll);
 }
@@ -379,6 +416,8 @@ void SpikePanel::showLaneDetail(int lane) {
     if (!m_detailWindow || lane < 0 || lane >= laneCount()) return;
     m_selectedLane = lane;
     m_grid->setSelectedLane(lane);
+    m_btnExport->setEnabled(true);
+    if (m_sortingWindow && m_sortingWindow->isVisible()) m_sortingWindow->setLane(lane);
 
     const QMap<int, double> &overrides = activeThresholdOverrides();
     const int thresholdKey = thresholdKeyForLane(lane);
@@ -437,26 +476,17 @@ void SpikePanel::setLaneThresholdOverride(int lane, bool enabled,
     scheduleSaveConfig();
 }
 
-void SpikePanel::startDetection() {
-    if (m_running || !m_hub) return;
-    if (!m_hub->isRunning()) {
-        setStatus(QStringLiteral("状态: 会话未运行 — 请先在顶部开始接收或加载 BIN"), "warn");
-        return;
-    }
-    if (!stopWorker()) {
-        setStatus(QStringLiteral("状态: 上一轮检测线程尚未退出，请稍候重试"), "error");
-        return;
-    }
-
-    const SpikeDetectConfig cfg = currentConfig();
+bool SpikePanel::configureAnalysisStore(const SpikeDetectConfig &cfg) {
     const int lanes = laneCount();
     const int len = cfg.preSamples + cfg.postSamples + 1;
     const int requestedRetention = m_retainSpin ? m_retainSpin->value() : 200;
     if (!m_store.configure(lanes, len, requestedRetention)) {
+        m_store.resetTimeline(m_hub ? m_hub->timelineEpoch() : 0);
+        resetViewState();
         setStatus(QStringLiteral("状态: Spike 留存内存不足，请缩短窗口或降低采样率"), "error");
-        return;
+        return false;
     }
-    m_store.resetTimeline(m_hub->timelineEpoch());
+    m_store.resetTimeline(m_hub ? m_hub->timelineEpoch() : 0);
     if (m_retainSpin && m_store.capacity() < requestedRetention) {
         const QSignalBlocker blocker(m_retainSpin);
         m_retainSpin->setMinimum(1);
@@ -464,8 +494,8 @@ void SpikePanel::startDetection() {
         m_retainSpin->setToolTip(QStringLiteral("已按 128 MiB 留存内存上限调整条数"));
         scheduleSaveConfig();
     }
-    m_lastCounts.fill(0, lanes);
     m_rates.fill(0.0, lanes);
+    m_analysisSampleRate = cfg.proc.sampleRate;
     updateLaneLabels();
     m_grid->setTimebase(procSampleRate(), cfg.preSamples);
     m_grid->setStore(&m_store);
@@ -483,7 +513,26 @@ void SpikePanel::startDetection() {
             m_detailOverlayCount);
     }
 
-    m_framesProcessed = 0;
+    resetViewState();
+    m_analysisProvenance = {};
+    return true;
+}
+
+void SpikePanel::startDetection() {
+    if (m_shutdown || m_running || !m_hub) return;
+    if (!m_hub->isRunning()) {
+        setStatus(QStringLiteral("状态: 会话未运行 — 请先在顶部开始接收或加载 BIN"), "warn");
+        return;
+    }
+    if (!stopWorker()) {
+        setStatus(QStringLiteral("状态: 上一轮检测线程尚未退出，请稍候重试"), "error");
+        return;
+    }
+
+    const SpikeDetectConfig cfg = currentConfig();
+    if (!configureAnalysisStore(cfg)) return;
+    const int lanes = laneCount();
+
     m_stopFlag = std::make_unique<std::atomic_bool>(false);
     m_rawQueue->clear();
     const qint64 initialFrame = m_hub->addSubscriberWithFrameOrigin(m_rawQueue);
@@ -496,12 +545,6 @@ void SpikePanel::startDetection() {
                                      m_hub->referenceModeCounter(),
                                      initialFrame,
                                       this, m_hub->timelineFrameOriginCounter());
-    SpikeDetectWorker *const active = m_worker;
-    connect(m_worker, &SpikeDetectWorker::framesProcessed, this,
-            [this, active](qint64 frames) {
-        if (m_worker != active) return;  // stale worker's queued signal
-        m_framesProcessed += frames;
-    });
     const bool negative = cfg.proc.negativePolarity;
     const QMap<int, double> &overrides = activeThresholdOverrides();
     for (int lane = 0; lane < lanes; ++lane) {
@@ -513,9 +556,10 @@ void SpikePanel::startDetection() {
     }
     m_worker->start();
 
-    m_rateTimer.start();
+    m_analysisError.clear();
     m_running = true;
-    m_refreshTimer.start();
+    publishAnalysisMetadata(true);
+    if (m_viewActive) m_refreshTimer.start();
     setStatus(QStringLiteral("状态: 检测中 (%1 电极，输入等效 %2×)")
                   .arg(lanes)
                   .arg(cfg.inputGain, 0, 'f', 0),
@@ -537,13 +581,27 @@ bool SpikePanel::stopWorker() {
             return false;
         }
     }
-    m_worker->deleteLater();
+    delete m_worker;
     m_worker = nullptr;
     return true;
 }
 
 void SpikePanel::restartDetection() {
-    if (!m_running) return;
+    if (m_loadingConfig || m_shutdown) return;
+    if (!m_running) {
+        // Explicit detector/mapping edits invalidate frozen results too: old
+        // ADC data must never be shown under newly selected TDM identities.
+        if (!stopWorker()) {
+            setStatus(QStringLiteral("状态: 检测线程尚未退出，不能更新分析配置"), "error");
+            return;
+        }
+        if (configureAnalysisStore(currentConfig())) {
+            m_analysisError.clear();
+            publishAnalysisMetadata(true);
+            refresh();
+        }
+        return;
+    }
     m_refreshTimer.stop();
     m_running = false;
     if (!stopWorker()) {
@@ -553,73 +611,272 @@ void SpikePanel::restartDetection() {
     startDetection();
 }
 
-void SpikePanel::clearAll() {
-    m_store.clear();
-    const int lanes = laneCount();
-    m_lastCounts.fill(0, lanes);
-    m_rates.fill(0.0, lanes);
-    if (m_grid) m_grid->clearTraces();
+void SpikePanel::resetViewState() {
+    m_rates.fill(0.0, m_store.channels());
+    if (m_grid) {
+        m_grid->clearTraces();
+        m_grid->setRates(m_rates);
+    }
     if (m_detailWindow) m_detailWindow->clearTraces();
 }
 
+void SpikePanel::clearAll() {
+    // A user-requested reset starts a coherent detector/exposure interval.
+    // Clearing the store under an in-flight batch would count old crossings
+    // against a new exposure denominator.
+    if (m_running) {
+        restartDetection();
+    } else {
+        m_store.clear();
+    }
+    resetViewState();
+    refresh();
+}
+
 void SpikePanel::refresh() {
-    if (!m_running) return;
-    if (!m_paused) {
+    if (m_viewActive && !m_paused) {
         m_grid->pullNewSnippets();
         if (m_detailWindow) m_detailWindow->pullNewSnippets();
     }
 
     QVector<qint64> totals;
+    QVector<qint64> observed;
     QVector<double> thresholds;
     QVector<double> rms;
-    m_store.snapshotStats(&totals, &thresholds, &rms);
+    SpikeAnalysisQuality quality;
+    m_store.snapshotAnalysis(&observed, &quality, &totals, &thresholds, &rms);
+    const bool coverageIssue = quality.missingSourceFrames > 0 || quality.queueDroppedFrames > 0 ||
+        quality.invalidFrames > 0 || quality.unverifiedFrames > 0 || quality.discontinuities > 0 ||
+        quality.boundaryExcludedEvents > 0 || quality.stoppedEarly;
 
-    const double elapsed = m_rateTimer.isValid() ? m_rateTimer.elapsed() / 1000.0 : 0.0;
-    if (elapsed >= 0.5) {
-        m_rateTimer.restart();
-        if (m_lastCounts.size() != totals.size()) m_lastCounts.fill(0, totals.size());
-        if (m_rates.size() != totals.size()) m_rates.fill(0.0, totals.size());
-        qint64 grandTotal = 0;
-        int activeLanes = 0;
-        for (int i = 0; i < totals.size(); ++i) {
-            const qint64 delta = qMax<qint64>(0, totals[i] - m_lastCounts[i]);
-            m_lastCounts[i] = totals[i];
-            // Light smoothing so the per-cell readout does not flicker.
-            m_rates[i] = 0.5 * m_rates[i] + 0.5 * (delta / elapsed);
-            grandTotal += totals[i];
-            if (m_rates[i] >= 1.0) ++activeLanes;
-        }
-        m_grid->setRates(m_rates);
-        setStatus(QStringLiteral("状态: 检测中 | 帧 %1 | 累计 spike %2 | 活跃电极 %3/%4")
-                      .arg(m_framesProcessed)
-                      .arg(grandTotal)
-                      .arg(activeLanes)
-                      .arg(totals.size()),
-                  "ok");
+    m_rates.fill(0.0, totals.size());
+    qint64 grandTotal = 0;
+    qint64 minSamples = observed.isEmpty() ? 0 : observed.first();
+    qint64 maxSamples = 0;
+    int activeLanes = 0;
+    for (int lane = 0; lane < totals.size(); ++lane) {
+        const qint64 samples = observed.value(lane);
+        // A mean over actually analyzed SOURCE samples. Rendering cadence,
+        // replay speed and pauses cannot change this denominator. Never turn
+        // a period with no new samples into artificial zero-rate evidence.
+        m_rates[lane] = samples > 0 && m_analysisSampleRate > 0.0
+                            ? static_cast<double>(totals[lane]) * m_analysisSampleRate / samples
+                            : 0.0;
+        grandTotal += totals[lane];
+        minSamples = qMin(minSamples, samples);
+        maxSamples = qMax(maxSamples, samples);
+        if (m_rates[lane] >= 1.0) ++activeLanes;
     }
+    m_grid->setRates(m_rates);
     m_grid->setThresholds(thresholds);
-    if (m_detailWindow && m_detailWindow->isVisible()) {
+    if (m_detailWindow && m_detailWindow->isVisible() && !m_paused) {
         m_detailWindow->updateData(totals, thresholds, rms, m_rates);
+    }
+
+    QString stateText;
+    if (!m_running) {
+        stateText = maxSamples > 0 ? QStringLiteral("分析已停止 · 保留结果")
+                                  : QStringLiteral("等待采集或回放");
+    } else if (m_hub && (m_hub->state() == SessionHub::State::ReplayPaused ||
+                         m_hub->state() == SessionHub::State::ReplayReady)) {
+        stateText = QStringLiteral("回放暂停/就绪 · 分析保持");
+    } else {
+        stateText = QStringLiteral("连续分析中");
+    }
+    if (m_paused) stateText += QStringLiteral(" · 显示暂停");
+    if (!m_running && !m_analysisError.isEmpty()) {
+        setStatus(m_analysisError, "error");
+    } else {
+        setStatus(QStringLiteral("%1 | 完整窗事件 %2 | 活跃 %3/%4")
+                      .arg(stateText).arg(grandTotal).arg(activeLanes).arg(totals.size()),
+                  coverageIssue ? "warn" : (m_running ? "ok" : "warn"));
+    }
+
+    const double fs = qMax(1.0, m_analysisSampleRate);
+    const QString exposure = minSamples == maxSamples
+        ? QStringLiteral("%1 s/电极").arg(maxSamples / fs, 0, 'f', 3)
+        : QStringLiteral("%1–%2 s/电极").arg(minSamples / fs, 0, 'f', 3)
+                                             .arg(maxSamples / fs, 0, 'f', 3);
+    const QString frameRange = quality.firstSourceFrame >= 0
+        ? QStringLiteral("%1–%2").arg(quality.firstSourceFrame).arg(quality.lastSourceFrame)
+        : QStringLiteral("无");
+    const QString scope = m_store.channels() == kChannelsTotal * 2
+        ? QStringLiteral("TDM 当前相位对 512/1024 电极") : QStringLiteral("256 ADC 通道");
+    QString qualityText = QStringLiteral("%1 | 已分析 %2 | 源帧 %3 | epoch %4 | Hz = 累计事件 / 已分析源时间")
+        .arg(scope).arg(exposure).arg(frameRange).arg(quality.epoch);
+    if (coverageIssue) {
+        qualityText += QStringLiteral(" | 覆盖不完整: 缺失 %1 帧, 队列丢失 %2 帧, 无效 %3 帧, 中断 %4, 未验证有效性 %5 帧")
+            .arg(quality.missingSourceFrames).arg(quality.queueDroppedFrames)
+            .arg(quality.invalidFrames).arg(quality.discontinuities).arg(quality.unverifiedFrames);
+        qualityText += QStringLiteral("; 边界排除 %1").arg(quality.boundaryExcludedEvents);
+        if (quality.stoppedEarly) qualityText += QStringLiteral("; 停止时未保证尾部分析完成");
+    } else {
+        qualityText += QStringLiteral(" | 此分析区间未发现缺口");
+    }
+    if (quality.pendingWindowEvents > 0) {
+        qualityText += QStringLiteral(" | 待完成后窗 %1（等待后续源样本）")
+            .arg(quality.pendingWindowEvents);
+    }
+    if (!m_replayProvenanceNote.isEmpty()) qualityText += QStringLiteral("\n") + m_replayProvenanceNote;
+    m_qualityStatus->setText(qualityText);
+    m_qualityStatus->setToolTip(QStringLiteral("只覆盖本轮检测实际处理的样本；计数为有完整前后波形窗的阈值事件，边界处不完整的窗不会计入。参数调整、清空和跳转会开启新统计区间。留存波形有容量上限，不等于完整事件档案。切页和暂停显示不会重置分析"));
+}
+
+void SpikePanel::publishAnalysisMetadata(bool newInterval) {
+    if (m_loadingConfig || !m_hub) return;
+    const QJsonObject current = spikeAnalysisMetadata(
+        currentConfig(), m_hub->referenceMode(), activeThresholdOverrides());
+    m_hub->setAnalysisMetadata(current);
+    if (!m_running && !newInterval) return; // preserve stopped results' provenance
+    if (newInterval || m_analysisProvenance.isEmpty()) {
+        m_analysisProvenance = current;
+        m_analysisProvenance["configuration_changes"] = QJsonArray{};
+        m_analysisProvenance["configuration_changed"] = false;
+        m_analysisProvenance["history_truncated"] = false;
+        m_analysisProvenance["latest_requested_configuration"] = current;
+        m_analysisProvenance["change_time_semantics"] =
+            "requested_source_frame_not_atomic_detector_application";
+    } else if (m_analysisProvenance.value("latest_requested_configuration").toObject() != current) {
+        QJsonArray changes = m_analysisProvenance.value("configuration_changes").toArray();
+        if (changes.size() < 256) {
+            changes.append(QJsonObject{
+                {"requested_source_frame", QString::number(m_hub->currentFrameIndex())},
+                {"configuration", current}});
+            m_analysisProvenance["configuration_changes"] = changes;
+        } else {
+            m_analysisProvenance["history_truncated"] = true;
+        }
+        m_analysisProvenance["configuration_changed"] = true;
+        m_analysisProvenance["latest_requested_configuration"] = current;
     }
 }
 
+void SpikePanel::exportSelectedLane() {
+    const int lane = m_selectedLane;
+    if (lane < 0 || lane >= m_store.channels()) return;
+    const QString path = QFileDialog::getSaveFileName(
+        this, QStringLiteral("导出选中电极的留存事件窗口（非完整录制）"),
+        QStringLiteral("spike_lane_%1_retained.json").arg(lane),
+        QStringLiteral("Spike 事件 JSON (*.json)"));
+    if (path.isEmpty()) return;
+    // Snapshot after closing the dialog, then export one bounded, atomically
+    // paired set of identities/waveforms/labels/coverage and its provenance.
+    if (lane != m_selectedLane || lane >= m_store.channels()) return;
+    const SpikeLaneSnapshot snapshot = m_store.snapshotLane(lane);
+    QJsonObject metadata = m_analysisProvenance;
+    if (!m_replayAnalysisMetadata.isEmpty()) {
+        metadata["recorded_source_analysis"] = m_replayAnalysisMetadata;
+        metadata["replay_configuration_policy"] = "current_settings_not_automatic_original_reproduction";
+    }
+    QString error;
+    if (!exportSpikeLaneJson(path, snapshot, metadata, &error)) {
+        QMessageBox::warning(this, QStringLiteral("导出未完成"), error);
+        return;
+    }
+    QMessageBox::information(this, QStringLiteral("留存事件已导出"),
+        QStringLiteral("已导出电极 %1 的 %2 条留存事件、波形和分析参数。\n这是有容量上限的窗口，不是完整事件档案。\n%3")
+            .arg(lane).arg(snapshot.events.size()).arg(path));
+}
+
+void SpikePanel::syncSessionState() {
+    if (m_shutdown || !m_hub) return;
+    if (m_hub->isRunning()) {
+        if (!m_hub->isReplaying()) {
+            m_replayAnalysisMetadata = {};
+            m_replayProvenanceNote.clear();
+        }
+        if (!m_running) startDetection();
+        if (m_viewActive) refresh();
+        return;
+    }
+    if (m_worker) {
+        // Session stop can discard queued/in-flight data. Keep the completed
+        // snapshot, explicitly marked partial, before the hub invalidates its
+        // epoch. A new start/seek/configuration owns its own fresh interval.
+        SpikeAnalysisQuality quality;
+        m_store.snapshotAnalysis(nullptr, &quality);
+        m_store.markAnalysisIncomplete(quality.epoch);
+        m_running = false;
+        if (!stopWorker()) {
+            // Stopping can come from SessionHub's destructor. It is unsafe
+            // to return while the thread still holds its atomic pointers.
+            setStatus(QStringLiteral("状态: 正在等待检测线程安全退出"), "warn");
+            m_worker->wait();
+            delete m_worker;
+            m_worker = nullptr;
+        }
+    }
+    m_refreshTimer.stop();
+    refresh();
+}
+
 void SpikePanel::setSessionHub(SessionHub *hub) {
+    if (m_hub == hub || m_shutdown) return;
+    if (m_hub) {
+        // Join before changing the hub: the worker holds pointers to the old
+        // hub's atomic timeline/reference counters.
+        if (m_worker) {
+            SpikeAnalysisQuality quality;
+            m_store.snapshotAnalysis(nullptr, &quality);
+            m_store.markAnalysisIncomplete(quality.epoch);
+        }
+        m_running = false;
+        if (!stopWorker()) {
+            setStatus(QStringLiteral("状态: 检测线程尚未退出，不能切换会话"), "error");
+            return;
+        }
+        disconnect(m_hub, nullptr, this, nullptr);
+        if (m_hub->tdmContext()) disconnect(m_hub->tdmContext(), nullptr, this, nullptr);
+    }
+    m_refreshTimer.stop();
     m_hub = hub;
     if (!m_hub) return;
     if (TdmContext *tdm = m_hub->tdmContext()) {
         applyTdmState(tdm->enabled(), tdm->pair02());
         connect(tdm, &TdmContext::changed, this, &SpikePanel::applyTdmState);
     }
-    connect(m_hub, &SessionHub::connectionStateChanged, this, [this](bool connected) {
-        if (!connected && m_running) {
-            setStatus(QStringLiteral("状态: 采集连接已断开"), "warn");
+    connect(m_hub, &SessionHub::stateChanged, this, [this](SessionHub::State) {
+        syncSessionState();
+    });
+    connect(m_hub, &SessionHub::referenceModeChanged, this, [this](int) {
+        // A different reference changes the filter input; don't mix its
+        // transients, thresholds and counts into the preceding interval.
+        restartDetection();
+        publishAnalysisMetadata();
+    });
+    connect(m_hub, &SessionHub::replayAnalysisMetadataAvailable, this,
+            [this](const QJsonObject &metadata) {
+        m_replayAnalysisMetadata = metadata;
+        if (metadata.value("initial_configuration").toObject().isEmpty() &&
+            metadata.value("algorithm").toString().isEmpty()) {
+            m_replayProvenanceNote = QStringLiteral("回放来源未记录神经分析参数；使用当前设置重新分析");
+        } else if (metadata.value("configuration_changed").toBool() ||
+                   metadata.value("history_truncated").toBool() ||
+                   !metadata.value("configuration_changes").toArray().isEmpty()) {
+            m_replayProvenanceNote = QStringLiteral("原录制含分析参数变更；当前回放使用当前设置，未逐帧复现原分析配置。原始参数随事件导出保留");
+        } else {
+            m_replayProvenanceNote = QStringLiteral("原录制分析参数已保留；当前回放使用当前设置重新分析，不保证与原检测结果相同");
         }
+        const QJsonObject source = metadata.value("source_provenance").toObject();
+        const qint64 ignoredTail = source.value("ignored_tail_bytes").toVariant().toLongLong();
+        if (!source.isEmpty() && (!source.value("integrity_complete").toBool() ||
+                                  !source.value("frame_validity_known").toBool() || ignoredTail > 0)) {
+            m_replayProvenanceNote += QStringLiteral("\n来源完整性未证实: 清单 %1，逐帧有效性 %2，忽略文件尾 %3 字节")
+                .arg(source.value("has_manifest").toBool() ? QStringLiteral("有") : QStringLiteral("无"))
+                .arg(source.value("frame_validity_known").toBool() ? QStringLiteral("已记录") : QStringLiteral("未知"))
+                .arg(ignoredTail);
+        }
+        if (m_viewActive) refresh();
     });
     connect(m_hub, &SessionHub::timelineReset, this, [this](quint64 epoch, qint64) {
-        // A seek/reset invalidates the retained waveforms' alignment.
+        // A seek/reset invalidates retained events and exposure together. The
+        // worker checks the epoch before publishing, so old work cannot leak.
         m_store.resetTimeline(epoch);
-        clearAll();
+        resetViewState();
+        if (m_viewActive) refresh();
     });
+    publishAnalysisMetadata();
+    syncSessionState();
 }
 
 void SpikePanel::applyTdmState(bool enabled, bool pair02) {
@@ -627,30 +884,39 @@ void SpikePanel::applyTdmState(bool enabled, bool pair02) {
     m_tdmEnabled = enabled;
     m_tdmPair02 = pair02;
     m_selectedLane = -1;
+    if (m_btnExport) m_btnExport->setEnabled(false);
     if (m_grid) m_grid->setSelectedLane(-1);
     if (m_detailWindow) m_detailWindow->hide();
+    if (m_sortingWindow) m_sortingWindow->hide();
     restartDetection();
+    publishAnalysisMetadata();
 }
 
 void SpikePanel::onActivated() {
-    if (m_hub && m_hub->isRunning() && !m_running) {
-        startDetection();
-    }
+    if (m_shutdown) return;
+    m_viewActive = true;
+    syncSessionState();
+    if (m_running) m_refreshTimer.start();
+    refresh();
 }
 
 void SpikePanel::onDeactivated() {
+    m_viewActive = false;
     if (m_detailWindow) m_detailWindow->hide();
-    if (!m_running) return;
+    if (m_sortingWindow) m_sortingWindow->hide();
+    // Only the view sleeps. The bounded store and session subscriber continue
+    // collecting events, even when the spike tab has never been opened.
     m_refreshTimer.stop();
-    m_running = false;
-    if (!stopWorker()) {
-        setStatus(QStringLiteral("状态: 正在停止，请稍候"), "warn");
-        return;
-    }
-    setStatus(QStringLiteral("状态: 已停止"), "warn");
 }
 
 void SpikePanel::shutdown() {
+    m_shutdown = true;
+    m_viewActive = false;
+    if (m_worker) {
+        SpikeAnalysisQuality quality;
+        m_store.snapshotAnalysis(nullptr, &quality);
+        m_store.markAnalysisIncomplete(quality.epoch);
+    }
     if (m_saveTimer.isActive()) {
         m_saveTimer.stop();
         saveConfig();
@@ -658,6 +924,7 @@ void SpikePanel::shutdown() {
     m_refreshTimer.stop();
     m_running = false;
     if (m_detailWindow) m_detailWindow->hide();
+    if (m_sortingWindow) m_sortingWindow->hide();
     if (!stopWorker()) {
         // Never let the page be destroyed with a live thread reading its stop
         // flag and queue: join unconditionally.
@@ -665,7 +932,7 @@ void SpikePanel::shutdown() {
         if (m_rawQueue) m_rawQueue->wakeAll();
         if (m_worker) {
             m_worker->wait();
-            m_worker->deleteLater();
+            delete m_worker;
             m_worker = nullptr;
         }
     }
@@ -677,11 +944,13 @@ void SpikePanel::setWaveTheme(const QMap<QString, QString> &palette) {
 }
 
 void SpikePanel::setStatus(const QString &text, const char *state) {
+    if (qstrcmp(state, "error") == 0) m_analysisError = text;
     setStatusLine(m_status, text, state);
 }
 
 void SpikePanel::scheduleSaveConfig() {
     if (m_loadingConfig) return;
+    publishAnalysisMetadata();
     m_saveTimer.start();
 }
 

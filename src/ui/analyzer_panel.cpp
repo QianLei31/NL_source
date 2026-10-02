@@ -1109,12 +1109,13 @@ void AnalyzerPanel::startLive() {
     }
 
     if (m_hub && m_fsSpin) {
+        const double sessionSampleRate = m_hub->sampleRate();
         const QSignalBlocker blocker(m_fsSpin);
-        m_fsSpin->setValue(m_hub->sampleRate());
+        m_fsSpin->setValue(sessionSampleRate);
         if (m_fftBandwidthSpin) {
             const bool tdm = m_tdmCheckbox && m_tdmCheckbox->isChecked();
             m_fftBandwidthSpin->setMaximum(
-                m_hub->sampleRate() / (tdm ? (2.0 * kTdmPhaseCount) : 2.0));
+                sessionSampleRate / (tdm ? (2.0 * kTdmPhaseCount) : 2.0));
         }
         m_fsSpin->setEnabled(false);
     }

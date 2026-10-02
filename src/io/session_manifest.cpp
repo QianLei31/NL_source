@@ -9,6 +9,8 @@
 #include <QJsonObject>
 #include <QSaveFile>
 
+#include <cmath>
+
 #include "core/constants.h"
 
 namespace ccv2 {
@@ -35,7 +37,40 @@ qint64 jsonInt64(const QJsonObject &object, const QString &key, qint64 fallback 
         const qint64 parsed = value.toString().toLongLong(&ok);
         return ok ? parsed : fallback;
     }
-    return value.isDouble() ? static_cast<qint64>(value.toDouble()) : fallback;
+    return value.isDouble() ? value.toInteger(fallback) : fallback;
+}
+
+// JSON doubles above 2^53 cannot encode every integer; writers use decimal
+// strings, and readers reject rounded, fractional, or overflowing coordinates.
+bool exactNonnegativeInt(const QJsonValue &value, qint64 *result)
+{
+    if (value.isString()) {
+        const QString text = value.toString();
+        if (text.isEmpty()) return false;
+        for (const QChar c : text) if (c < QLatin1Char('0') || c > QLatin1Char('9')) return false;
+        bool ok = false;
+        *result = text.toLongLong(&ok);
+        return ok && *result >= 0;
+    }
+    if (!value.isDouble()) return false;
+    const double number = value.toDouble();
+    if (!std::isfinite(number) || number < 0 || number > 9007199254740991.0 ||
+        number != std::floor(number)) return false;
+    *result = static_cast<qint64>(number);
+    return true;
+}
+
+bool validRanges(const QVector<SessionFrameRange> &ranges, qint64 totalFrames)
+{
+    if (totalFrames < 0 || ranges.size() > SessionManifest::kMaxValidityRanges) return false;
+    qint64 previousEnd = 0;
+    for (const auto &range : ranges) {
+        if (range.startFrame < previousEnd || range.frameCount <= 0 ||
+            range.startFrame > totalFrames || range.frameCount > totalFrames - range.startFrame)
+            return false;
+        previousEnd = range.startFrame + range.frameCount;
+    }
+    return true;
 }
 
 }  // namespace
@@ -44,6 +79,10 @@ bool SessionManifest::write(const QString &folderPath,
                             const SessionManifestData &data,
                             QString *error)
 {
+    if (!validRanges(data.invalidFrameRanges, data.totalFrames)) {
+        if (error) *error = QStringLiteral("session.json invalid frame validity ranges");
+        return false;
+    }
     QJsonObject format;
     format.insert(QStringLiteral("channels"), kChannelsTotal);
     format.insert(QStringLiteral("bytes_per_point"), kBytesPerPoint);
@@ -79,6 +118,24 @@ bool SessionManifest::write(const QString &folderPath,
 
     QJsonObject root;
     root.insert(QStringLiteral("schema_version"), 1);
+    if (!data.metadata.neuralAnalysis.isEmpty())
+        root.insert(QStringLiteral("neural_analysis"), data.metadata.neuralAnalysis);
+    if (data.frameValidityKnown || data.integrityUnknown || !data.invalidFrameRanges.isEmpty()) {
+        QJsonObject validity;
+        validity.insert(QStringLiteral("version"), 1);
+        validity.insert(QStringLiteral("coordinate_space"), QStringLiteral("recorded_frames"));
+        validity.insert(QStringLiteral("known"), data.frameValidityKnown);
+        validity.insert(QStringLiteral("integrity_unknown"), data.integrityUnknown);
+        QJsonArray ranges;
+        for (const auto &range : data.invalidFrameRanges) {
+            QJsonObject item;
+            item.insert(QStringLiteral("start_frame"), QString::number(range.startFrame));
+            item.insert(QStringLiteral("frame_count"), QString::number(range.frameCount));
+            ranges.append(item);
+        }
+        validity.insert(QStringLiteral("invalid_ranges"), ranges);
+        root.insert(QStringLiteral("frame_validity"), validity);
+    }
     root.insert(QStringLiteral("created_at"), data.metadata.createdAt);
     root.insert(QStringLiteral("ended_at"), data.endedAt);
     root.insert(QStringLiteral("active"), data.active);
@@ -178,6 +235,12 @@ bool SessionManifest::read(const QString &folderOrManifest,
     data->metadata.tdmEvenFirst = source.contains(QStringLiteral("tdm_pair_02"))
                                       ? source.value(QStringLiteral("tdm_pair_02")).toBool(true)
                                       : source.value(QStringLiteral("tdm_even_first")).toBool(true);
+    const auto analysis = root.value(QStringLiteral("neural_analysis"));
+    if (!analysis.isUndefined() && !analysis.isObject()) {
+        if (error) *error = QStringLiteral("session.json neural_analysis must be an object");
+        return false;
+    }
+    data->metadata.neuralAnalysis = analysis.toObject();
     data->metadata.createdAt = root.value(QStringLiteral("created_at")).toString();
     data->endedAt = root.value(QStringLiteral("ended_at")).toString();
     data->active = root.value(QStringLiteral("active")).toBool(false);
@@ -193,6 +256,50 @@ bool SessionManifest::read(const QString &folderOrManifest,
     data->integrity.repeatedFrames = jsonInt64(root, QStringLiteral("timestamp_repeated_frames"));
     data->integrity.irregularJumps = jsonInt64(root, QStringLiteral("timestamp_irregular_jumps"));
     data->integrity.intraFrameMismatchFrames = jsonInt64(root, QStringLiteral("intra_frame_mismatch_frames"));
+
+    const auto validityValue = root.value(QStringLiteral("frame_validity"));
+    if (!validityValue.isUndefined()) {
+        const auto validity = validityValue.toObject();
+        const auto rangesValue = validity.value(QStringLiteral("invalid_ranges"));
+        if (!validityValue.isObject() || validity.value(QStringLiteral("version")) != QJsonValue(1) ||
+            validity.value(QStringLiteral("coordinate_space")).toString() != QStringLiteral("recorded_frames") ||
+            !validity.value(QStringLiteral("known")).isBool() || !rangesValue.isArray() ||
+            rangesValue.toArray().size() > kMaxValidityRanges ||
+            (validity.contains(QStringLiteral("integrity_unknown")) &&
+             !validity.value(QStringLiteral("integrity_unknown")).isBool())) {
+            if (error) *error = QStringLiteral("session.json malformed or unsupported frame_validity");
+            return false;
+        }
+        qint64 exactTotalFrames = 0;
+        if (!exactNonnegativeInt(root.value(QStringLiteral("total_frames")), &exactTotalFrames)) {
+            if (error) *error = QStringLiteral("session.json invalid total_frames for frame validity coordinates");
+            return false;
+        }
+        data->totalFrames = exactTotalFrames;
+        data->frameValidityKnown = validity.value(QStringLiteral("known")).toBool();
+        data->integrityUnknown = validity.value(QStringLiteral("integrity_unknown")).toBool();
+        for (const auto &value : rangesValue.toArray()) {
+            const auto object = value.toObject();
+            SessionFrameRange range;
+            if (!value.isObject() ||
+                !exactNonnegativeInt(object.value(QStringLiteral("start_frame")), &range.startFrame) ||
+                !exactNonnegativeInt(object.value(QStringLiteral("frame_count")), &range.frameCount)) {
+                if (error) *error = QStringLiteral("session.json malformed frame validity interval");
+                return false;
+            }
+            data->invalidFrameRanges.push_back(range);
+        }
+        if (!validRanges(data->invalidFrameRanges, data->totalFrames)) {
+            if (error) *error = QStringLiteral("session.json invalid, overlapping or out-of-bounds frame validity intervals");
+            return false;
+        }
+    }
+
+    // A partial mask never proves the remaining frames valid. In particular,
+    // old complete=true manifests can still contain unlocated drop padding.
+    data->integrityUnknown = data->integrityUnknown || (!data->frameValidityKnown &&
+        (data->ingressDroppedFrames != 0 || data->recordingDroppedFrames != 0 ||
+         !data->integrity.clean() || !data->complete || !data->invalidFrameRanges.isEmpty()));
 
     data->parts.clear();
     const QJsonValue partsValue = root.value(QStringLiteral("parts"));
@@ -250,6 +357,15 @@ bool SessionManifest::resolveInput(const QString &path, double fallbackSampleRat
         if (member) {
             input->hasManifest = true;
             input->metadata = manifest.metadata;
+            input->frameValidityKnown = manifest.frameValidityKnown;
+            input->invalidFrameRanges = manifest.invalidFrameRanges;
+            const bool hasLoss = manifest.ingressDroppedFrames != 0 ||
+                manifest.recordingDroppedFrames != 0 || !manifest.integrity.clean();
+            input->integrityUnknown = manifest.integrityUnknown ||
+                (!manifest.frameValidityKnown && (hasLoss || !manifest.complete));
+            input->integrityComplete = manifest.complete && manifest.frameValidityKnown &&
+                !input->integrityUnknown && !hasLoss && manifest.invalidFrameRanges.isEmpty();
+            bool fileCoordinatesMatch = true;
             if (!manifest.complete) input->warning = QStringLiteral("该 Session 数据可能不完整");
             for (const auto &part : manifest.parts) {
                 const QFileInfo info(folder.filePath(part.fileName));
@@ -263,10 +379,25 @@ bool SessionManifest::resolveInput(const QString &path, double fallbackSampleRat
                     return false;
                 }
                 const qint64 frames = info.size() / kFrameBytes;
+                fileCoordinatesMatch = fileCoordinatesMatch && frames == part.frames;
                 input->parts.push_back({info.absoluteFilePath(), frames, input->totalFrames});
                 input->totalFrames += frames;
                 input->ignoredTailBytes += info.size() % kFrameBytes;
             }
+            if (!fileCoordinatesMatch || input->totalFrames != manifest.totalFrames) {
+                // An interrupted/truncated part shifts subsequent global offsets.
+                // Never apply a stale mask to different samples.
+                input->frameValidityKnown = false;
+                input->integrityUnknown = true;
+                input->integrityComplete = false;
+                input->invalidFrameRanges.clear();
+            }
+            if (!input->frameValidityKnown || input->integrityUnknown)
+                input->warning += QStringLiteral(" 帧有效性未知；缺少可靠的逐帧完整性信息");
+            if (input->integrityUnknown)
+                input->warning += QStringLiteral(" 检测已禁用，避免将未知丢帧占位数据当作神经信号");
+            else if (!input->invalidFrameRanges.isEmpty())
+                input->warning += QStringLiteral(" 已标记无效帧，神经检测将跳过这些帧");
         }
     } else if (explicitSession) {
         if (error) *error = QStringLiteral("Session 缺少 session.json");
@@ -280,8 +411,10 @@ bool SessionManifest::resolveInput(const QString &path, double fallbackSampleRat
         input->totalFrames = selected.size() / kFrameBytes;
         input->ignoredTailBytes = selected.size() % kFrameBytes;
         input->parts.push_back({selected.absoluteFilePath(), input->totalFrames, 0});
+        input->warning = QStringLiteral("原始 BIN 无帧有效性元数据，完整性未知");
     }
     if (input->ignoredTailBytes > 0) {
+        input->integrityComplete = false;
         input->warning += QStringLiteral(" 分片残尾已分别忽略 (%1 B)").arg(input->ignoredTailBytes);
     }
     if (input->totalFrames == 0) {

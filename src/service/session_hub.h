@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QByteArray>
+#include <QJsonObject>
 #include <QMutex>
 #include <QObject>
 #include <QString>
@@ -134,12 +135,16 @@ public:
     // Global software reference (common-mode removal), applied by the array
     // display sorters. 0=off, 1=common-average (CAR), 2=median.
     enum ReferenceMode { RefOff = 0, RefCommonAverage = 1, RefMedian = 2 };
-    void setReferenceMode(int mode) { m_referenceMode.store(mode); }
+    void setReferenceMode(int mode);
+    void setAnalysisMetadata(const QJsonObject &metadata);
+    QJsonObject analysisMetadata() const;
     int referenceMode() const { return m_referenceMode.load(); }
     const std::atomic<int> *referenceModeCounter() const { return &m_referenceMode; }
 
 signals:
     void stateChanged(ccv2::SessionHub::State state);
+    void referenceModeChanged(int mode);
+    void replayAnalysisMetadataAvailable(const QJsonObject &metadata);
     void connectionEvent(const QString &message);
     void controlLinkResult(bool reachable, const QString &message);
     void connectionStateChanged(bool connected);
@@ -217,6 +222,8 @@ private:
     int m_dataPort{0};
     QString m_command{QStringLiteral("ctre")};
     QString m_recordingPath;
+    QJsonObject m_analysisMetadata;
+    QJsonObject m_recordingAnalysisMetadata;
 };
 
 }  // namespace ccv2
