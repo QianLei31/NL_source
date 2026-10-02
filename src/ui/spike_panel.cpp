@@ -24,6 +24,10 @@
 #include "core/tdm_context.h"
 #include "io/spike_event_exporter.h"
 #include "service/session_hub.h"
+#include "service/spike_offline_analysis.h"
+#include "ui/widgets/spike_analysis_controls.h"
+#include "ui/widgets/spike_archive_browser.h"
+#include "ui/widgets/spike_rule_editor.h"
 #include "ui/widgets/spike_detail_window.h"
 #include "ui/widgets/spike_grid_view.h"
 #include "ui/widgets/spike_sorting_widget.h"
@@ -91,6 +95,10 @@ SpikePanel::SpikePanel(ConfigManager *cfgMgr, QWidget *parent)
 
     connect(&m_refreshTimer, &QTimer::timeout, this, &SpikePanel::refresh);
     m_refreshTimer.setInterval(50);  // 20 Hz snippet pull
+    m_store.setAnnotationCallback([this](const QVector<SpikeEvent> &events) { m_archive.annotate(events); });
+    connect(&m_analysisToolsTimer, &QTimer::timeout, this, &SpikePanel::updateAnalysisTools);
+    m_analysisToolsTimer.setInterval(250);
+    m_analysisToolsTimer.start();
 }
 
 SpikePanel::~SpikePanel() {
@@ -130,7 +138,8 @@ void SpikePanel::buildUi() {
     cbar->addWidget(fieldLabel(QStringLiteral("阈值")));
     m_threshModeCombo = new QComboBox;
     m_threshModeCombo->addItem(QStringLiteral("RMS 倍数"), 0);
-    m_threshModeCombo->addItem(QStringLiteral("绝对值 µV"), 1);
+    m_threshModeCombo->addItem(QStringLiteral("绝对 µV"), 1);
+    m_threshModeCombo->setMinimumWidth(84);
     cbar->addWidget(m_threshModeCombo);
     m_threshSpin = new QDoubleSpinBox;
     m_threshSpin->setRange(0.5, 500.0);
@@ -224,7 +233,7 @@ void SpikePanel::buildUi() {
     m_btnClear->setProperty("variant", "secondary");
     m_btnClear->setToolTip(QStringLiteral("清空留存并重启分析统计区间；不会停止采集或录制"));
     vbar->addWidget(m_btnClear);
-    auto *sortingButton = new QPushButton(QStringLiteral("分选 / 质量"));
+    auto *sortingButton = new QPushButton(QStringLiteral("候选分选"));
     sortingButton->setObjectName(QStringLiteral("spikeSortingWorkspace"));
     sortingButton->setProperty("variant", "secondary");
     sortingButton->setToolTip(QStringLiteral("在当前会话内查看特征、源时间 raster、ISI，并手动标记候选单元；仅限留存窗口"));
@@ -244,13 +253,80 @@ void SpikePanel::buildUi() {
     m_status->setWordWrap(true);
     m_status->setMinimumWidth(0);
     root->addWidget(viewOpts);
-    root->addWidget(m_status);
+    auto *statusControls = new QWidget;
+    statusControls->setProperty("role", "page-control-panel");
+    auto *statusRow = new QHBoxLayout(statusControls);
+    statusRow->setContentsMargins(0, 0, 0, 0);
+    statusRow->setSpacing(8);
+    statusRow->addWidget(m_status, 1);
+    auto *detailsButton = new QPushButton(QStringLiteral("分析详情 ▾"));
+    detailsButton->setObjectName(QStringLiteral("spikeAnalysisDetails"));
+    detailsButton->setProperty("variant", "secondary");
+    detailsButton->setCheckable(true);
+    statusRow->addWidget(detailsButton);
+    root->addWidget(statusControls);
+
+    m_qualitySummary = new QLabel(QStringLiteral("分析随会话持续运行；切页和暂停显示不停止分析"));
+    m_qualitySummary->setObjectName(QStringLiteral("spikeCoverageSummary"));
+    m_qualitySummary->setProperty("role", "caption");
+    m_qualitySummary->setWordWrap(true);
+    root->addWidget(m_qualitySummary);
 
     m_qualityStatus = new QLabel(QStringLiteral("分析随采集或回放自动启动；切换页面不停止分析。频率按已分析的源时间计算"));
     m_qualityStatus->setObjectName(QStringLiteral("spikeAnalysisQuality"));
     m_qualityStatus->setProperty("role", "caption");
     m_qualityStatus->setWordWrap(true);
-    root->addWidget(m_qualityStatus);
+    auto *details = new QWidget;
+    details->setObjectName(QStringLiteral("spikeAnalysisDetailsPanel"));
+    details->setProperty("role", "plot-area");
+    auto *detailsLayout = new QVBoxLayout(details);
+    detailsLayout->setContentsMargins(10, 8, 10, 8);
+    detailsLayout->addWidget(m_qualityStatus);
+    root->addWidget(details);
+    details->hide();
+    connect(detailsButton, &QPushButton::toggled, this, [details, detailsButton](bool expanded) {
+        details->setVisible(expanded);
+        detailsButton->setText(expanded ? QStringLiteral("收起详情 ▴") : QStringLiteral("分析详情 ▾"));
+    });
+
+    auto *archiveToolsButton = new QPushButton(QStringLiteral("事件档案 · 离线分析 · 持续分类 ▾"));
+    archiveToolsButton->setObjectName(QStringLiteral("spikeArchiveTools"));
+    archiveToolsButton->setCheckable(true);
+    root->addWidget(archiveToolsButton, 0, Qt::AlignLeft);
+    m_analysisControls = new SpikeAnalysisControls(this);
+    root->addWidget(m_analysisControls);
+    m_analysisControls->hide();
+    connect(archiveToolsButton, &QPushButton::toggled, m_analysisControls, &QWidget::setVisible);
+    m_archiveBrowser = new SpikeArchiveBrowser(this);
+    m_ruleEditor = new SpikeRuleEditor(this);
+    connect(m_analysisControls, &SpikeAnalysisControls::startArchiveRequested, this, [this](const QString &path) {
+        QString error; if (!startEventArchive(path, &error)) setStatus(error, "error");
+    });
+    connect(m_analysisControls, &SpikeAnalysisControls::stopArchiveRequested, this, &SpikePanel::stopEventArchive);
+    connect(m_analysisControls, &SpikeAnalysisControls::openArchiveRequested, this, [this](const QString &path) {
+        m_archiveBrowser->openArchive(path); m_archiveBrowser->show(); m_archiveBrowser->raise();
+    });
+    connect(m_analysisControls, &SpikeAnalysisControls::ruleEditorRequested, this, [this] {
+        m_ruleEditor->setLane(qMax(0, m_selectedLane));
+        const auto applied=m_worker ? m_worker->appliedRuleSet() : SpikeRuleSet::Snapshot{};
+        m_ruleEditor->setProperty("appliedRevision",QVariant::fromValue(applied ? applied->revision() : quint64(0)));
+        m_ruleEditor->setAppliedRules(applied,m_worker ? QString{} : QStringLiteral("检测未运行；会话中的待应用规则尚无当前服务确认"));
+        m_ruleEditor->setRequestedRules(m_rules);
+        captureRuleContext(m_ruleEditor->lane());
+        m_ruleEditor->show(); m_ruleEditor->raise();
+    });
+    connect(m_ruleEditor, &SpikeRuleEditor::captureRequested, this, &SpikePanel::captureRuleContext);
+    connect(m_ruleEditor, &SpikeRuleEditor::applyRulesRequested, this, [this](const QVector<SpikeElectrodeRules> &rules) {
+        QString error; if (!applyCandidateRules(rules, &error)) m_ruleEditor->setServiceStatus(error);
+    });
+    connect(m_analysisControls, &SpikeAnalysisControls::analyzeRecordingRequested, this,
+            [this](const QString &input, const QString &output) {
+        QString error; if (!startOfflineAnalysis(input,output,&error))
+            m_analysisControls->setOfflineProgress(0,0,error,false);
+    });
+    connect(m_analysisControls, &SpikeAnalysisControls::cancelAnalysisRequested, this, [this] {
+        if (m_offline) m_offline->requestCancel();
+    });
 
     // --- full-array grid ---------------------------------------------------
     auto *gridWrap = new QWidget;
@@ -519,7 +595,7 @@ bool SpikePanel::configureAnalysisStore(const SpikeDetectConfig &cfg) {
 }
 
 void SpikePanel::startDetection() {
-    if (m_shutdown || m_running || !m_hub) return;
+    if (m_shutdown || m_running || !m_hub || m_drainedEpoch == m_hub->timelineEpoch()) return;
     if (!m_hub->isRunning()) {
         setStatus(QStringLiteral("状态: 会话未运行 — 请先在顶部开始接收或加载 BIN"), "warn");
         return;
@@ -554,6 +630,8 @@ void SpikePanel::startDetection() {
             (negative ? -it.value() : it.value()) * 1e-6;
         m_worker->setLaneThresholdOverride(lane, true, thresholdV);
     }
+    m_archive.attach(m_worker);
+    m_worker->setRuleSet(m_rules);
     m_worker->start();
 
     m_analysisError.clear();
@@ -567,6 +645,10 @@ void SpikePanel::startDetection() {
 }
 
 bool SpikePanel::stopWorker() {
+    if (m_worker) {
+        SpikeAnalysisQuality quality; m_store.snapshotAnalysis(nullptr,&quality);
+        m_store.markAnalysisIncomplete(quality.epoch);
+    }
     if (m_hub) {
         m_hub->removeSubscriber(m_rawQueue);
     }
@@ -583,6 +665,10 @@ bool SpikePanel::stopWorker() {
     }
     delete m_worker;
     m_worker = nullptr;
+    QJsonObject integrity = spikeQualityJson(m_store);
+    integrity["end_reason"] = "analysis_interrupted_or_reconfigured";
+    integrity["source_provenance"] = m_replayAnalysisMetadata.value("source_provenance");
+    m_archive.finish(SpikeArchiveState::Drained, integrity);
     return true;
 }
 
@@ -719,6 +805,22 @@ void SpikePanel::refresh() {
     }
     if (!m_replayProvenanceNote.isEmpty()) qualityText += QStringLiteral("\n") + m_replayProvenanceNote;
     m_qualityStatus->setText(qualityText);
+    QStringList alerts;
+    if (quality.missingSourceFrames > 0 || quality.queueDroppedFrames > 0 ||
+        quality.invalidFrames > 0 || quality.discontinuities > 0) alerts << QStringLiteral("存在缺口或无效帧");
+    if (quality.unverifiedFrames > 0) alerts << QStringLiteral("来源有效性未验证");
+    if (quality.stoppedEarly) alerts << QStringLiteral("停止尾部未保证完整");
+    if (quality.boundaryExcludedEvents > 0) alerts << QStringLiteral("已排除边界不完整窗口");
+    if (quality.pendingWindowEvents > 0) alerts << QStringLiteral("%1 个窗口等待后续样本").arg(quality.pendingWindowEvents);
+    const QJsonObject source = m_replayAnalysisMetadata.value("source_provenance").toObject();
+    if (!source.isEmpty() && !source.value("integrity_complete").toBool())
+        alerts << QStringLiteral("来源完整性未证实");
+    if (source.value("ignored_tail_bytes").toVariant().toLongLong() > 0)
+        alerts << QStringLiteral("文件尾有未读取字节");
+    if (!m_replayProvenanceNote.isEmpty()) alerts << QStringLiteral("回放采用当前分析设置");
+    m_qualitySummary->setText(QStringLiteral("%1 · 已分析 %2 · %3")
+        .arg(scope, exposure, alerts.isEmpty() ? QStringLiteral("当前区间未发现已知缺口") : alerts.join(QStringLiteral(" · "))));
+    m_qualitySummary->setToolTip(qualityText);
     m_qualityStatus->setToolTip(QStringLiteral("只覆盖本轮检测实际处理的样本；计数为有完整前后波形窗的阈值事件，边界处不完整的窗不会计入。参数调整、清空和跳转会开启新统计区间。留存波形有容量上限，不等于完整事件档案。切页和暂停显示不会重置分析"));
 }
 
@@ -780,6 +882,7 @@ void SpikePanel::exportSelectedLane() {
 
 void SpikePanel::syncSessionState() {
     if (m_shutdown || !m_hub) return;
+    if (m_hub->state() == SessionHub::State::Stopping) return; // producer drain barrier follows
     if (m_hub->isRunning()) {
         if (!m_hub->isReplaying()) {
             m_replayAnalysisMetadata = {};
@@ -835,6 +938,7 @@ void SpikePanel::setSessionHub(SessionHub *hub) {
         applyTdmState(tdm->enabled(), tdm->pair02());
         connect(tdm, &TdmContext::changed, this, &SpikePanel::applyTdmState);
     }
+    connect(m_hub, &SessionHub::sourceDrained, this, &SpikePanel::drainWorker);
     connect(m_hub, &SessionHub::stateChanged, this, [this](SessionHub::State) {
         syncSessionState();
     });
@@ -871,8 +975,16 @@ void SpikePanel::setSessionHub(SessionHub *hub) {
     connect(m_hub, &SessionHub::timelineReset, this, [this](quint64 epoch, qint64) {
         // A seek/reset invalidates retained events and exposure together. The
         // worker checks the epoch before publishing, so old work cannot leak.
+        if (m_archive.status().state == SpikeArchiveState::Running) {
+            QJsonObject integrity = spikeQualityJson(m_store);
+            integrity["end_reason"] = "timeline_changed";
+            integrity["stopped_early"] = true;
+            m_archive.finish(SpikeArchiveState::Drained, integrity);
+        }
+        m_drainedEpoch = std::numeric_limits<quint64>::max();
         m_store.resetTimeline(epoch);
         resetViewState();
+        if (!m_worker && m_hub && m_hub->isRunning()) startDetection();
         if (m_viewActive) refresh();
     });
     publishAnalysisMetadata();
@@ -911,6 +1023,10 @@ void SpikePanel::onDeactivated() {
 
 void SpikePanel::shutdown() {
     m_shutdown = true;
+    m_analysisToolsTimer.stop();
+    if (m_offline) { m_offline->requestCancel(); m_offline->wait(); delete m_offline; m_offline = nullptr; }
+    if (m_archiveBrowser) m_archiveBrowser->hide();
+    if (m_ruleEditor) m_ruleEditor->hide();
     m_viewActive = false;
     if (m_worker) {
         SpikeAnalysisQuality quality;
@@ -939,8 +1055,114 @@ void SpikePanel::shutdown() {
 }
 
 void SpikePanel::setWaveTheme(const QMap<QString, QString> &palette) {
+    m_wavePalette = palette;
+    if (m_analysisControls) m_analysisControls->setWaveTheme(palette);
+    if (m_archiveBrowser) m_archiveBrowser->setWaveTheme(palette);
+    if (m_ruleEditor) m_ruleEditor->setWaveTheme(palette);
     if (m_grid) m_grid->setThemePalette(palette);
     if (m_detailWindow) m_detailWindow->setWaveTheme(palette);
+    if (m_sortingWindow) m_sortingWindow->setWaveTheme(palette);
+}
+
+bool SpikePanel::startEventArchive(const QString &directory, QString *error) {
+    if (!m_worker || !m_running || !m_worker->isRunning()) {
+        if (error) *error = QStringLiteral("事件档案需要正在运行的检测；可先加载回放并保持暂停");
+        return false;
+    }
+    QJsonObject metadata = m_analysisProvenance;
+    metadata["source_provenance"] = m_replayAnalysisMetadata.value("source_provenance");
+    metadata["archive_requested_source_frame"] = QString::number(m_hub ? m_hub->currentFrameIndex() : 0);
+    const bool ok = m_archive.start(directory,metadata,error);
+    updateAnalysisTools(); return ok;
+}
+void SpikePanel::stopEventArchive() {
+    QJsonObject integrity = spikeQualityJson(m_store);
+    integrity["end_reason"] = "user_stopped_archive_at_emission_boundary";
+    integrity["source_provenance"] = m_replayAnalysisMetadata.value("source_provenance");
+    m_archive.finish(SpikeArchiveState::Drained,integrity,false);
+    updateAnalysisTools();
+}
+void SpikePanel::drainWorker(quint64 epoch, bool eof, bool cleanStop) {
+    if (!m_worker || !m_hub || epoch != m_hub->timelineEpoch()) return;
+    m_hub->detachSubscriberForDrain(m_rawQueue);
+    m_worker->requestDrain();
+    m_worker->wait();
+    const bool drained = m_worker->drained();
+    if (!drained || !cleanStop) m_store.markAnalysisIncomplete(epoch);
+    m_running = false;
+    m_drainedEpoch = epoch;
+    delete m_worker; m_worker = nullptr;
+    QJsonObject integrity = spikeQualityJson(m_store);
+    integrity["source_provenance"] = m_replayAnalysisMetadata.value("source_provenance");
+    integrity["end_reason"] = eof ? "source_eof" : "source_stopped";
+    integrity["producer_detector_drained"] = drained;
+    integrity["source_stop_clean"] = cleanStop;
+    m_archive.finish(eof && drained && cleanStop ? SpikeArchiveState::Completed : SpikeArchiveState::Drained,integrity);
+    updateAnalysisTools(); refresh();
+}
+bool SpikePanel::applyCandidateRules(const QVector<SpikeElectrodeRules> &definitions, QString *error) {
+    auto next = SpikeRuleSet::create(m_nextRuleRevision,definitions,error);
+    if (!next) return false;
+    if (m_worker && !m_worker->setRuleSet(next)) {
+        if (error) *error = QStringLiteral("处理服务拒绝规则版本"); return false;
+    }
+    ++m_nextRuleRevision; m_rules = std::move(next);
+    m_ruleEditor->setRequestedRules(m_rules);
+    m_ruleEditor->setServiceStatus(m_worker
+        ? QStringLiteral("规则已提交；将在下一个处理块边界用于未来事件，等待实际应用确认")
+        : QStringLiteral("规则已保存于本次应用会话；下一次检测时生效。可导出 JSON 跨重启保留"));
+    updateAnalysisTools(); return true;
+}
+void SpikePanel::captureRuleContext(int lane) {
+    if (!m_worker || lane < 0 || lane >= m_worker->laneCount()) {
+        m_ruleEditor->setServiceStatus(QStringLiteral("请先运行检测，再捕获正在处理的通道")); return;
+    }
+    quint64 revision=0;
+    const SpikeRuleContext context = m_worker->appliedRuleContext(lane,&revision);
+    const auto snapshot = m_store.snapshotLane(lane);
+    QVector<SpikeArchiveRecord> records;
+    for (int i=0; i<snapshot.events.size(); ++i) {
+        const auto &event = snapshot.events[i];
+        if (event.runId != m_worker->runId() || event.detectorRevision != revision) continue;
+        records.push_back({event,snapshot.waveforms.mid(i*snapshot.snippetLength,snapshot.snippetLength)});
+    }
+    m_ruleEditor->setCapturedContext(context,records,QStringLiteral("仅捕获当前实际检测版本 %1 的留存波形；应用只影响未来事件").arg(revision));
+}
+bool SpikePanel::startOfflineAnalysis(const QString &input, const QString &output, QString *error) {
+    if (m_offline && m_offline->isRunning()) {
+        if (error) *error = QStringLiteral("请先完成或取消当前离线任务"); return false;
+    }
+    if (m_offline) { delete m_offline; m_offline=nullptr; }
+    SpikeOfflineAnalysisRequest request;
+    request.inputPath=input; request.outputDirectory=output;
+    request.config=currentConfig(); request.referenceMode=m_hub ? m_hub->referenceMode() : 0;
+    request.thresholdOverridesUvByElectrode=activeThresholdOverrides(); request.rules=m_rules;
+    m_offline = new SpikeOfflineAnalysisJob(request,this);
+    connect(m_offline,&SpikeOfflineAnalysisJob::progressChanged,this,&SpikePanel::updateAnalysisTools);
+    connect(m_offline,&QThread::finished,this,&SpikePanel::updateAnalysisTools);
+    m_offline->start(); updateAnalysisTools(); return true;
+}
+void SpikePanel::updateAnalysisTools() {
+    if (!m_analysisControls) return;
+    m_analysisControls->setArchiveStatus(m_archive.status(),m_archive.directory());
+    if (m_offline) {
+        const auto s=m_offline->status();
+        const QString coverage = s.sourceIntegrity.value("incomplete_coverage").toBool()
+            ? QStringLiteral(" · 来源或分析覆盖存在限制") : QString{};
+        const QString text = QStringLiteral("档案状态 %1 · %2 事件 · %3%4%5")
+            .arg(s.finalizing ? QStringLiteral("正在完成已接收尾部，不能取消") : spikeArchiveStateName(s.state)).arg(s.archive.writtenEvents)
+            .arg(s.error, s.warning.isEmpty() ? QString{} : QStringLiteral(" · ")+s.warning, coverage);
+        m_analysisControls->setOfflineProgress(s.processedFrames,s.totalFrames,text,m_offline->isRunning() && s.cancellable, m_offline->isRunning() && s.finalizing);
+    }
+    if (m_ruleEditor && m_worker) {
+        const auto applied=m_worker->appliedRuleSet();
+        const auto displayed=m_ruleEditor->property("appliedRevision").toULongLong();
+        const quint64 revision=applied ? applied->revision() : 0;
+        if (revision != displayed) {
+            m_ruleEditor->setProperty("appliedRevision",QVariant::fromValue(revision));
+            m_ruleEditor->setAppliedRules(applied,QStringLiteral("服务已在处理边界应用规则版本 %1").arg(revision));
+        }
+    }
 }
 
 void SpikePanel::setStatus(const QString &text, const char *state) {

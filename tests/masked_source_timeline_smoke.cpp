@@ -60,5 +60,24 @@ int main(int argc,char **argv) {
     if(liveFrames!=replayFrames || liveValidity!=replayValidity)return 11;
     const auto provenance=replay.sourceProvenance();
     if(!provenance["has_manifest"].toBool() || !provenance["frame_validity_known"].toBool() || provenance["integrity_complete"].toBool())return 12;
+    // Raw BIN has no validity mask. Reject internally inconsistent timestamps
+    // before reconciliation without inventing verified-source provenance.
+    const QString rawPath=tmp.filePath("corrupted_raw.bin");
+    QFile rawFile(rawPath); if(!rawFile.open(QIODevice::WriteOnly)||rawFile.write(bytes)!=bytes.size())return 13;
+    rawFile.close();
+    ccv2::ReplayController raw(replayQueue);
+    if(!raw.open(rawPath,20000)||raw.frameValidityKnown())return 14;
+    QVector<qint64> rawFrames;
+    while(true){if(!raw.readNextBlock(7,&part,&info))return 15;if(part.isEmpty())break;
+        if(!info.frameValid.isEmpty())return 16;rawFrames+=info.frameIndices;}
+    if(rawFrames!=liveFrames||raw.sourceProvenance()["frame_validity_known"].toBool())return 17;
+    raw.seekFrame(67); if(!waitFor([&]{return !raw.isSeeking()&&raw.currentFrame()==67;}))return 18;
+    if(raw.nextSourceFrame()!=67||!raw.readNextBlock(20,&part,&info)||info.firstFrame()!=67)return 19;
+    for(int i=0;i<info.frameIndices.size();++i)
+        if(info.frameIndices[i]!=67+i||info.frameIndices[i]%4!=(67+i)%4)return 20;
+    raw.seekFrame(0);if(!waitFor([&]{return !raw.isSeeking()&&raw.currentFrame()==0;}))return 21;
+    raw.play();if(!waitFor([&]{return raw.currentFrame()==128;}))return 22;
+    rawFrames.clear();while(replayQueue->pop(part,0,nullptr,&info))rawFrames+=info.frameIndices;
+    if(rawFrames!=liveFrames)return 23;
     std::cout<<"masked_source_timeline_smoke OK\n";return 0;
 }

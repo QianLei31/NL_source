@@ -1,8 +1,17 @@
 #pragma once
 
 #include <QtGlobal>
+#include <QUuid>
 
 namespace ccv2 {
+
+enum class SpikeClassificationStatus : quint8 {
+    Unassigned = 0,
+    Assigned = 1,
+    Ambiguous = 2,
+    Incompatible = 3,
+    Manual = 4
+};
 
 // One threshold crossing and its retained, spike-band, input-referred waveform.
 // sourceFrame is the unwrapped source-frame coordinate carried by StreamBlockInfo,
@@ -23,6 +32,13 @@ struct SpikeEvent {
     int sampleStride = 1;      // source frames per waveform sample
     int preSamples = 0;        // crossing index within the stored waveform
     int unitId = -1;           // -1 = unsorted; >=0 manual candidate label, not biological isolation
+    // Archive identity is independent of the bounded display ring's sequence.
+    // Null/zero means this legacy/display event was not assigned an archive ID.
+    QUuid runId;
+    quint64 eventId = 0;
+    quint64 detectorRevision = 0;
+    quint64 ruleRevision = 0;
+    SpikeClassificationStatus classification = SpikeClassificationStatus::Unassigned;
 
     bool hasSourceTime() const {
         return sourceFrame >= 0 && sourceSampleRate > 0.0;

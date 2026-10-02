@@ -20,6 +20,9 @@ bool frameIsInvalid(const QVector<SessionFrameRange> &ranges, qint64 frame) {
     return frame - range.startFrame < range.frameCount;
 }
 qint64 advanceFileFrame(FrameTimestampReconciler &timeline, const char *frame, bool invalid) {
+    const quint32 timestamp = qFromLittleEndian<quint32>(frame) >> kTimestampShift;
+    for (int ch=1; !invalid && ch<kChannelsTotal; ++ch)
+        invalid = (qFromLittleEndian<quint32>(frame + ch*kBytesPerPoint) >> kTimestampShift) != timestamp;
     if (invalid) {
         const qint64 index = timeline.nextIndex();
         timeline.skipFrames(1); // Synthetic zeros must not reset timestamp phase.
@@ -266,6 +269,35 @@ QByteArray ReplayController::readFrames(qint64 count) {
         count -= take;
     }
     return out;
+}
+
+bool ReplayController::readNextBlock(qint64 maximumFrames, QByteArray *bytes, StreamBlockInfo *info) {
+    if (!bytes || !info || !isOpen() || isPlaying() || m_seeking || !m_pendingChunk.isEmpty()) {
+        m_error = QStringLiteral("离线读取需要独立、暂停且没有待发送块的输入");
+        return false;
+    }
+    bytes->clear(); *info = {};
+    if (!m_error.isEmpty()) return false;
+    const qint64 count = qMin(qBound<qint64>(qint64(1), maximumFrames, qint64(4096)), m_totalFrames - m_curFrame);
+    if (count <= 0) return true;
+    *bytes = readFrames(count);
+    if (!m_error.isEmpty() || bytes->size() != count * m_frameBytes) {
+        if (m_error.isEmpty()) m_error = QStringLiteral("离线输入读取不完整");
+        bytes->clear(); return false;
+    }
+    info->epoch = m_epoch;
+    info->integrityUnknown = m_integrityUnknown;
+    const bool hasMask = m_frameValidityKnown || !m_invalidFrameRanges.isEmpty();
+    info->frameIndices.reserve(count);
+    if (hasMask) info->frameValid.reserve(count);
+    for (qint64 f = 0; f < count; ++f) {
+        const bool invalid = frameIsInvalid(m_invalidFrameRanges, m_curFrame + f);
+        if (hasMask) info->frameValid.push_back(!invalid);
+        info->frameIndices.push_back(advanceFileFrame(m_readerTimeline,
+            bytes->constData() + f * kFrameBytes, invalid));
+    }
+    m_curFrame += count;
+    return true;
 }
 
 bool ReplayController::deliverPending() {

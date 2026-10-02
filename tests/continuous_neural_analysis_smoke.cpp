@@ -195,14 +195,21 @@ int main(int argc, char **argv) {
                         qMax<qint64>(1, tdm.exposure.value(0))) < 1e-9,
                "TDM source-time rate uses wrong stride")) return 21;
 
-    // Explicit stop preserves the completed snapshot but reports incomplete
-    // coverage because queued/in-flight tail analysis is not guaranteed.
+    // Normal stop joins the producer/distributor and drains accepted detector
+    // input. The final snapshot can advance; raw-source validity stays unknown.
     const Snapshot beforeStop = snapshot(panel);
     hub.stop();
     const Snapshot stopped = snapshot(panel);
-    if (!check(!panel.analysisRunning() && stopped.exposure == beforeStop.exposure &&
-               stopped.totals == beforeStop.totals && stopped.quality.stoppedEarly,
-               "session stop failed to preserve and qualify analysis")) return 22;
+    bool monotonic = stopped.exposure.size() == beforeStop.exposure.size() &&
+                     stopped.totals.size() == beforeStop.totals.size();
+    for (int lane = 0; monotonic && lane < stopped.exposure.size(); ++lane) {
+        monotonic = stopped.exposure[lane] >= beforeStop.exposure[lane] &&
+                    stopped.totals[lane] >= beforeStop.totals[lane];
+    }
+    if (!check(!panel.analysisRunning() && monotonic &&
+               stopped.quality.pendingWindowEvents == 0 && !stopped.quality.stoppedEarly &&
+               stopped.quality.unverifiedFrames > 0 && stopped.quality.incomplete(),
+               "normal stop failed to drain accepted data while retaining raw-source uncertainty")) return 22;
     panel.onDeactivated();
     panel.onActivated();
     if (!check(snapshot(panel).totals == stopped.totals && !panel.analysisRunning(),

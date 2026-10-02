@@ -10,10 +10,12 @@
 
 #include <atomic>
 #include <memory>
+#include <limits>
 
 #include "core/threadsafe_queue.h"
 #include "service/spike_detect_worker.h"
 #include "signal/spike_snippet_store.h"
+#include "service/neural_archive_controller.h"
 
 class QCheckBox;
 class QComboBox;
@@ -29,6 +31,10 @@ class SessionHub;
 class SpikeDetailWindow;
 class SpikeGridView;
 class SpikeSortingWidget;
+class SpikeAnalysisControls;
+class SpikeArchiveBrowser;
+class SpikeRuleEditor;
+class SpikeOfflineAnalysisJob;
 
 // Page 5: array-wide spike panel (Blackrock Central style). Every electrode
 // gets a cell that overlays the last N threshold-aligned waveforms, so unit
@@ -55,6 +61,12 @@ public:
     const SpikeSnippetStore *analysisStore() const { return &m_store; }
     bool analysisRunning() const { return m_running; }
     QVector<double> analysisRatesHz() const { return m_rates; }
+    bool startEventArchive(const QString &directory, QString *error = nullptr);
+    void stopEventArchive();
+    bool applyCandidateRules(const QVector<SpikeElectrodeRules> &rules, QString *error = nullptr);
+    bool startOfflineAnalysis(const QString &input, const QString &output, QString *error = nullptr);
+    SpikeOfflineAnalysisJob *offlineJob() const { return m_offline; }
+    SpikeArchiveStatus eventArchiveStatus() const { return m_archive.status(); }
 
 private slots:
     void refresh();
@@ -65,6 +77,9 @@ private slots:
 private:
     void buildUi();
     bool stopWorker();
+    void drainWorker(quint64 epoch, bool eof, bool cleanStop);
+    void captureRuleContext(int lane);
+    void updateAnalysisTools();
     bool configureAnalysisStore(const SpikeDetectConfig &cfg);
     void startDetection();
     void syncSessionState();
@@ -93,6 +108,7 @@ private:
     SpikeSortingWidget *m_sortingWindow = nullptr;
     QLabel *m_status = nullptr;
     QLabel *m_qualityStatus = nullptr;
+    QLabel *m_qualitySummary = nullptr;
     QComboBox *m_gainCombo = nullptr;
     QComboBox *m_threshModeCombo = nullptr;
     QDoubleSpinBox *m_threshSpin = nullptr;
@@ -112,6 +128,16 @@ private:
     QPushButton *m_btnExport = nullptr;
 
     SpikeSnippetStore m_store;
+    NeuralArchiveController m_archive;
+    SpikeRuleSet::Snapshot m_rules;
+    quint64 m_nextRuleRevision = 1;
+    quint64 m_drainedEpoch = std::numeric_limits<quint64>::max();
+    SpikeAnalysisControls *m_analysisControls = nullptr;
+    SpikeArchiveBrowser *m_archiveBrowser = nullptr;
+    SpikeRuleEditor *m_ruleEditor = nullptr;
+    SpikeOfflineAnalysisJob *m_offline = nullptr;
+    QMap<QString, QString> m_wavePalette;
+    QTimer m_analysisToolsTimer;
     std::shared_ptr<ThreadSafeQueue<QByteArray>> m_rawQueue;
     std::unique_ptr<std::atomic_bool> m_stopFlag;
     SpikeDetectWorker *m_worker = nullptr;

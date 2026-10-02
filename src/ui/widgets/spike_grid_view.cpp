@@ -140,7 +140,9 @@ void SpikeGridView::setThemePalette(const QMap<QString, QString> &palette) {
     pick(QStringLiteral("wave"), m_wave);
     pick(QStringLiteral("border"), m_border);
     m_layersValid = false;
-    update();
+    // Recreating the backing pixmaps clears the trace layer. Repaint retained
+    // snippets too: a paused stream has no fresh events to restore them later.
+    rebuildAll();
 }
 
 void SpikeGridView::recalcGeometry() {

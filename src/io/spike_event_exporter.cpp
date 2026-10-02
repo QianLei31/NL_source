@@ -56,7 +56,7 @@ bool exportSpikeLaneJson(const QString &path, const SpikeLaneSnapshot &s,
     root["schema_version"] = 1;
     root["created_at_utc"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs);
     root["scope"] = "retained_selected_lane_window_not_complete_recording";
-    root["unit_label_semantics"] = "manual_candidate_labels_not_validated_neuron_isolation";
+    root["unit_label_semantics"] = "manual_or_waveform_box_candidate_labels_not_validated_neuron_isolation";
     root["analysis"] = metadata;
     root["lane"] = s.lane;
     root["snippet_length"] = s.snippetLength;
@@ -103,6 +103,11 @@ bool exportSpikeLaneJson(const QString &path, const SpikeLaneSnapshot &s,
         row["sample_stride"] = e.sampleStride;
         row["pre_samples"] = e.preSamples;
         row["candidate_unit_id"] = e.unitId;
+        row["run_id"] = e.runId.toString(QUuid::WithoutBraces);
+        row["event_id"] = QString::number(e.eventId);
+        row["detector_revision"] = QString::number(e.detectorRevision);
+        row["rule_revision"] = QString::number(e.ruleRevision);
+        row["classification_status"] = static_cast<int>(e.classification);
         QJsonArray wave;
         for (int k = 0; k < s.snippetLength; ++k) {
             const float v = s.waveforms[i * s.snippetLength + k];

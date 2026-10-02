@@ -143,6 +143,20 @@ set(SOURCES
     src/signal/spike_event.h
     src/io/spike_event_exporter.h
     src/io/spike_event_exporter.cpp
+    src/signal/spike_rule_classifier.h
+    src/signal/spike_rule_classifier.cpp
+    src/io/spike_event_archive.h
+    src/io/spike_event_archive.cpp
+    src/service/neural_archive_controller.h
+    src/service/neural_archive_controller.cpp
+    src/service/spike_offline_analysis.h
+    src/service/spike_offline_analysis.cpp
+    src/ui/widgets/spike_analysis_controls.h
+    src/ui/widgets/spike_analysis_controls.cpp
+    src/ui/widgets/spike_archive_browser.h
+    src/ui/widgets/spike_archive_browser.cpp
+    src/ui/widgets/spike_rule_editor.h
+    src/ui/widgets/spike_rule_editor.cpp
     src/signal/spike_sorting_model.h
     src/signal/spike_sorting_model.cpp
     src/ui/widgets/spike_sorting_widget.h
@@ -726,6 +740,55 @@ if(BUILD_TESTING)
         set_tests_properties(review_${_case} PROPERTIES TIMEOUT 30)
     endforeach()
 
+    add_executable(ccv2_spike_rule_classifier_smoke tests/spike_rule_classifier_smoke.cpp
+        src/signal/spike_rule_classifier.cpp)
+    target_include_directories(ccv2_spike_rule_classifier_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} src)
+    target_link_libraries(ccv2_spike_rule_classifier_smoke PRIVATE Qt6::Core)
+    add_test(NAME spike_rule_classifier_smoke COMMAND ccv2_spike_rule_classifier_smoke)
+
+    add_executable(ccv2_spike_event_archive_smoke tests/spike_event_archive_smoke.cpp
+        src/io/spike_event_archive.cpp src/signal/spike_snippet_store.cpp)
+    target_include_directories(ccv2_spike_event_archive_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} src)
+    target_link_libraries(ccv2_spike_event_archive_smoke PRIVATE Qt6::Core)
+    add_test(NAME spike_event_archive_smoke COMMAND ccv2_spike_event_archive_smoke)
+    set_tests_properties(spike_event_archive_smoke PROPERTIES TIMEOUT 90)
+
+    add_executable(ccv2_spike_archive_rule_widgets_smoke tests/spike_archive_rule_widgets_smoke.cpp
+        src/ui/widgets/spike_archive_browser.cpp src/ui/widgets/spike_rule_editor.cpp
+        src/ui/widgets/spike_analysis_controls.cpp src/io/spike_event_archive.cpp
+        src/signal/spike_rule_classifier.cpp src/theme/theme_manager.cpp src/ui/theme/theme.qrc)
+    target_include_directories(ccv2_spike_archive_rule_widgets_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} src)
+    target_link_libraries(ccv2_spike_archive_rule_widgets_smoke PRIVATE Qt6::Core Qt6::Widgets Qt6::Concurrent)
+    add_test(NAME spike_archive_rule_widgets_smoke COMMAND ccv2_spike_archive_rule_widgets_smoke)
+    set_tests_properties(spike_archive_rule_widgets_smoke PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 90)
+
+    add_executable(ccv2_spike_rule_worker_smoke tests/spike_rule_worker_smoke.cpp
+        src/service/spike_detect_worker.cpp src/signal/spike_snippet_store.cpp
+        src/signal/spike_filter.cpp src/signal/spike_rule_classifier.cpp)
+    target_include_directories(ccv2_spike_rule_worker_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} src)
+    target_link_libraries(ccv2_spike_rule_worker_smoke PRIVATE Qt6::Core)
+    add_test(NAME spike_rule_worker_smoke COMMAND ccv2_spike_rule_worker_smoke)
+    set_tests_properties(spike_rule_worker_smoke PROPERTIES TIMEOUT 60)
+
+    add_executable(ccv2_neural_archive_controller_smoke tests/neural_archive_controller_smoke.cpp
+        src/service/neural_archive_controller.cpp src/service/spike_detect_worker.cpp
+        src/io/spike_event_archive.cpp src/signal/spike_snippet_store.cpp
+        src/signal/spike_filter.cpp src/signal/spike_rule_classifier.cpp)
+    target_include_directories(ccv2_neural_archive_controller_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} src)
+    target_link_libraries(ccv2_neural_archive_controller_smoke PRIVATE Qt6::Core Qt6::Concurrent)
+    add_test(NAME neural_archive_controller_smoke COMMAND ccv2_neural_archive_controller_smoke)
+    set_tests_properties(neural_archive_controller_smoke PROPERTIES TIMEOUT 60)
+
+    add_executable(ccv2_spike_offline_analysis_smoke tests/spike_offline_analysis_smoke.cpp
+        src/service/spike_offline_analysis.cpp src/service/spike_detect_worker.cpp
+        src/io/spike_event_archive.cpp src/network/replay_controller.cpp src/io/session_manifest.cpp
+        src/signal/spike_snippet_store.cpp src/signal/spike_filter.cpp src/signal/spike_rule_classifier.cpp
+        src/service/dummy_stream_server.cpp)
+    target_include_directories(ccv2_spike_offline_analysis_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} src)
+    target_link_libraries(ccv2_spike_offline_analysis_smoke PRIVATE Qt6::Core Qt6::Network Qt6::Concurrent)
+    add_test(NAME spike_offline_analysis_smoke COMMAND ccv2_spike_offline_analysis_smoke)
+    set_tests_properties(spike_offline_analysis_smoke PROPERTIES TIMEOUT 120)
+
     add_executable(ccv2_spike_event_export_smoke tests/spike_event_export_smoke.cpp
         src/io/spike_event_exporter.cpp src/signal/spike_snippet_store.cpp)
     target_include_directories(ccv2_spike_event_export_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} src)
@@ -794,4 +857,62 @@ if(BUILD_TESTING)
     add_test(NAME theme_token_smoke COMMAND ccv2_theme_token_smoke)
     set_tests_properties(theme_token_smoke PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
+    add_executable(ccv2_spike_grid_theme_smoke tests/spike_grid_theme_smoke.cpp
+        src/ui/widgets/spike_grid_view.cpp src/signal/spike_snippet_store.cpp)
+    target_include_directories(ccv2_spike_grid_theme_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} src)
+    target_link_libraries(ccv2_spike_grid_theme_smoke PRIVATE Qt6::Widgets)
+    add_test(NAME spike_grid_theme_smoke COMMAND ccv2_spike_grid_theme_smoke)
+    set_tests_properties(spike_grid_theme_smoke PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+    # Exercise the real application shell, resources, theme propagation and
+    # populated neural workspace; isolated widgets miss application-wide QSS.
+    set(CCV2_VISUAL_APP_SOURCES ${SOURCES})
+    list(REMOVE_ITEM CCV2_VISUAL_APP_SOURCES src/main.cpp)
+    add_library(ccv2_test_app OBJECT ${V3_SOURCES} ${CCV2_VISUAL_APP_SOURCES})
+    target_include_directories(ccv2_test_app PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} src)
+    target_link_libraries(ccv2_test_app PUBLIC
+        Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::OpenGL
+        Qt6::OpenGLWidgets Qt6::Concurrent)
+    if(WIN32)
+        target_include_directories(ccv2_test_app PRIVATE "${_openssl_root}/include")
+        target_link_libraries(ccv2_test_app PUBLIC "${_openssl_root}/lib/libcrypto.dll.a")
+    else()
+        target_link_libraries(ccv2_test_app PUBLIC OpenSSL::Crypto)
+    endif()
+    add_executable(ccv2_full_app_visual_smoke tests/full_app_visual_smoke.cpp)
+    target_link_libraries(ccv2_full_app_visual_smoke PRIVATE ccv2_test_app)
+    add_test(NAME full_app_visual_smoke COMMAND ccv2_full_app_visual_smoke)
+    set_tests_properties(full_app_visual_smoke PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 90)
+
+    foreach(_dummy_case acquisition_e2e processing_ui_e2e session_ui_e2e protocol_model_smoke auxiliary_ui_e2e neural_archive_e2e)
+        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/dummy_${_dummy_case}.cpp")
+            add_executable(ccv2_dummy_${_dummy_case} tests/dummy_${_dummy_case}.cpp)
+            target_link_libraries(ccv2_dummy_${_dummy_case} PRIVATE ccv2_test_app)
+            add_test(NAME dummy_${_dummy_case} COMMAND ccv2_dummy_${_dummy_case})
+            set_tests_properties(dummy_${_dummy_case} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 180)
+        endif()
+    endforeach()
+    if(TARGET ccv2_dummy_processing_ui_e2e)
+        set_tests_properties(dummy_processing_ui_e2e PROPERTIES TIMEOUT 300)
+        add_test(NAME dummy_selected_map_exit COMMAND ccv2_dummy_processing_ui_e2e --map-only)
+        set_tests_properties(dummy_selected_map_exit PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 45)
+    endif()
+
+endif()
+
+# Keep legacy standalone detector test targets linked to the same classifier.
+get_property(_all_ccv2_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+foreach(_target IN LISTS _all_ccv2_targets)
+    get_target_property(_target_sources ${_target} SOURCES)
+    if("src/service/spike_detect_worker.cpp" IN_LIST _target_sources AND
+       NOT "src/signal/spike_rule_classifier.cpp" IN_LIST _target_sources)
+        target_sources(${_target} PRIVATE src/signal/spike_rule_classifier.cpp)
+    endif()
+endforeach()
+if(TARGET ccv2_continuous_neural_analysis_smoke)
+    target_sources(ccv2_continuous_neural_analysis_smoke PRIVATE
+        src/io/spike_event_archive.cpp src/service/neural_archive_controller.cpp
+        src/service/spike_offline_analysis.cpp
+        src/ui/widgets/spike_analysis_controls.cpp src/ui/widgets/spike_archive_browser.cpp
+        src/ui/widgets/spike_rule_editor.cpp)
 endif()

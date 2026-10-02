@@ -55,6 +55,8 @@ public:
     qint64 addSubscriberWithFrameOrigin(
         const std::shared_ptr<ThreadSafeQueue<QByteArray>> &queue);
     void removeSubscriber(const std::shared_ptr<ThreadSafeQueue<QByteArray>> &queue);
+    // Detach a scientific consumer without discarding its accepted tail.
+    void detachSubscriberForDrain(const std::shared_ptr<ThreadSafeQueue<QByteArray>> &queue);
 
     bool start(const QString &host,
                int controlPort,
@@ -154,6 +156,9 @@ signals:
     void recordingError(const QString &message);
     void triggerFired(quint64 epoch);
     void replayFinished();
+    // Producer and distributor have handed off every accepted frame. Direct
+    // consumers may drain their queues before epoch invalidation.
+    void sourceDrained(quint64 epoch, bool eof, bool cleanStop);
     void replayError(const QString &message);
     void replayPosition(qint64 curFrame, qint64 totalFrames);
     void replayPlayingChanged(bool playing);
@@ -170,6 +175,7 @@ private:
     void setState(State state);
     void stopInternal(State finalState, const QString &reason);
     void resetTimeline(qint64 targetFrame, bool notifyViews = true);
+    void finishReplayAfterDistribution(quint64 epoch);
     void performReplaySeek(qint64 targetFrame);
     void cleanupRecordingWorker();
     // Atomically (w.r.t. the distributor's m_dispatchMutex) clears

@@ -248,11 +248,16 @@ SpikeLaneSnapshot SpikeSnippetStore::snapshotLane(int channel) const {
     return snapshot;
 }
 
+void SpikeSnippetStore::setAnnotationCallback(std::function<void(const QVector<SpikeEvent> &)> callback) {
+    QMutexLocker locker(&m_lock); m_annotationCallback = std::move(callback);
+}
+
 int SpikeSnippetStore::setCandidateUnit(quint64 epoch, int lane,
                                         const QVector<quint64> &sequences, int unitId) {
     QMutexLocker locker(&m_lock);
     if (epoch != m_epoch || lane < 0 || lane >= m_channels || unitId < -1) return 0;
     const QSet<quint64> selected(sequences.cbegin(), sequences.cend());
+    QVector<SpikeEvent> changedEvents;
     int changed = 0;
     const qsizetype base = static_cast<qsizetype>(lane) * m_cap;
     for (int i = 0; i < m_count[lane]; ++i) {
@@ -260,9 +265,14 @@ int SpikeSnippetStore::setCandidateUnit(quint64 epoch, int lane,
         SpikeEvent &event = m_events[base + slot];
         if (event.epoch == epoch && selected.contains(event.sequence)) {
             event.unitId = unitId;
+            event.classification = SpikeClassificationStatus::Manual;
+            changedEvents.push_back(event);
             ++changed;
         }
     }
+    const auto callback = m_annotationCallback;
+    locker.unlock();
+    if (callback && !changedEvents.isEmpty()) callback(changedEvents);
     return changed;
 }
 

@@ -1,5 +1,6 @@
 # V7 neural-analysis preview
 
+> Historical preview1 document. Current scope and final verification are in [preview2 report](v7_preview2_release.md).
 Version: 7.0.0-preview.1-20261002. Based on commit
 `f4780565da036695c2521638d9802997b300553c`.
 

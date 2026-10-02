@@ -54,6 +54,10 @@ public:
     bool isSeeking() const { return m_seeking; }
     qint64 nextSourceFrame() const { return m_readerTimeline.nextIndex(); }
     void setTimelineEpoch(quint64 epoch) { m_epoch = epoch; }
+    // Synchronous, lossless pull for a dedicated offline worker. Never use on
+    // the timed GUI transport while playing/seeking or with pending delivery.
+    // Empty output with true means EOF; false carries errorString().
+    bool readNextBlock(qint64 maximumFrames, QByteArray *bytes, StreamBlockInfo *info);
 
 public slots:
     void play();

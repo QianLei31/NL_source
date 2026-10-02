@@ -48,6 +48,18 @@ QVector<int> versionParts(const QString &version)
     return parts;
 }
 
+int compareParts(const QVector<int> &left, const QVector<int> &right)
+{
+    const int count = qMax(left.size(), right.size());
+    for (int i = 0; i < count; ++i) {
+        const int a = (i < left.size()) ? left.at(i) : 0;
+        const int b = (i < right.size()) ? right.at(i) : 0;
+        if (a < b) return -1;
+        if (a > b) return 1;
+    }
+    return 0;
+}
+
 // The version endpoint is plain HTTP and its body is unsigned; a tampered
 // download_url must never reach QDesktopServices::openUrl. Accept only
 // https:// links on the project's release hosts, otherwise fall back to the
@@ -78,10 +90,15 @@ UpdateClient::UpdateClient(QObject *parent)
 
 UpdateClient::~UpdateClient()
 {
+    m_timeout->stop();
     if (m_reply) {
-        m_reply->abort();
-        m_reply->deleteLater();
+        // abort() emits finished synchronously. Detach the pending reply before
+        // aborting so its handler cannot clear m_reply or report a stale result.
+        QNetworkReply *reply = m_reply;
         m_reply = nullptr;
+        disconnect(reply, nullptr, this, nullptr);
+        reply->abort();
+        reply->deleteLater();
     }
 }
 
@@ -97,30 +114,40 @@ QString UpdateClient::defaultDownloadUrl()
 
 int UpdateClient::compareVersions(const QString &lhs, const QString &rhs)
 {
-    const QVector<int> left = versionParts(lhs);
-    const QVector<int> right = versionParts(rhs);
-    const int count = qMax(left.size(), right.size());
-    for (int i = 0; i < count; ++i) {
-        const int a = (i < left.size()) ? left.at(i) : 0;
-        const int b = (i < right.size()) ? right.at(i) : 0;
-        if (a < b) {
-            return -1;
-        }
-        if (a > b) {
-            return 1;
+    // Published tags use numeric stable versions or -preview.N, and the UI
+    // optionally appends -YYYYMMDD. A final 7.0.0 must supersede its preview
+    // even though the preview's numeric suffix/date would otherwise rank higher.
+    // Keep legacy numeric ordering for same-kind and unrecognized versions.
+    static const QRegularExpression releaseForm(
+        QStringLiteral("^v?(\\d+(?:\\.\\d+)*)(-preview(?:\\.\\d+)+)?(?:-\\d{8})?$"),
+        QRegularExpression::CaseInsensitiveOption);
+    const auto leftRelease = releaseForm.match(lhs.trimmed());
+    const auto rightRelease = releaseForm.match(rhs.trimmed());
+    if (leftRelease.hasMatch() && rightRelease.hasMatch()) {
+        const bool leftPreview = !leftRelease.captured(2).isEmpty();
+        const bool rightPreview = !rightRelease.captured(2).isEmpty();
+        if (leftPreview || rightPreview) {
+            const int coreOrder = compareParts(versionParts(leftRelease.captured(1)),
+                                               versionParts(rightRelease.captured(1)));
+            if (coreOrder != 0) return coreOrder;
+            if (leftPreview != rightPreview) return leftPreview ? -1 : 1;
         }
     }
-    // All numeric fields equal -> same version. A lexicographic tie-break
-    // would flag "v6.0.1" as newer than "6.0.1" forever.
-    return 0;
+    // Equal numeric fields mean the same version: v6.0.1 == 6.0.1.0.
+    return compareParts(versionParts(lhs), versionParts(rhs));
 }
 
 void UpdateClient::checkForUpdates(const QString &currentVersion)
 {
+    m_timeout->stop();
     if (m_reply) {
-        m_reply->abort();
-        m_reply->deleteLater();
+        // abort() emits finished synchronously. Detach the pending reply before
+        // aborting so its handler cannot clear m_reply or report a stale result.
+        QNetworkReply *reply = m_reply;
         m_reply = nullptr;
+        disconnect(reply, nullptr, this, nullptr);
+        reply->abort();
+        reply->deleteLater();
     }
 
     QUrl url(updateEndpoint());

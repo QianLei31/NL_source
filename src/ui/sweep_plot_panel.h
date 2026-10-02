@@ -62,6 +62,8 @@ private:
     void applyViewParams();
     void applyProcConfig();
     void updateFrequencyLimits();
+    void syncSourceSampleRate();
+    double sourceSampleRate() const;
     void loadConfig();
     void scheduleSaveConfig();
     void saveConfig() const;
@@ -91,7 +93,8 @@ private:
     QLineEdit *m_chEdit = nullptr;
     QLineEdit *m_cmdEdit = nullptr;
     QDoubleSpinBox *m_spanSpin = nullptr;
-    QSpinBox *m_fsSpin = nullptr;
+    QDoubleSpinBox *m_fsSpin = nullptr;
+    double m_standaloneSampleRate = 20000.0;
     QDoubleSpinBox *m_yfsSpin = nullptr;
     QSpinBox *m_refreshSpin = nullptr;
     QComboBox *m_bandCombo = nullptr;

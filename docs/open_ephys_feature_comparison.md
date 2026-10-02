@@ -1,126 +1,169 @@
-# NL_source 与 Open Ephys：功能差距与补齐顺序
+# NL_source 与 Open Ephys：功能对照与剩余差距
 
-核查日期：2026-10-02。代码基线：`f4780565da036695c2521638d9802997b300553c`；同时检查本次 `7.0.0-preview.1` 工作区改动。下文的“原版”指该提交，“预览版”指本次改动，不代表已经发布的稳定版本。代码定位采用“文件 + 符号 + 检查时行号”，后续改动可能使行号偏移。
+核查日期：2026-10-02；本版核查时间截至 07:31 UTC。原始代码基线：`f4780565da036695c2521638d9802997b300553c`。本报告区分原版、preview1 和已完成本轮软件回归的 **7.0.0-preview.2**；预览版软件验收不等于实体硬件或生物信号有效性验收。源码采用“文件 + 符号 + 核查时行号”定位，后续改动可能使行号偏移。
 
 ## 先说结论
 
-NL_source 已经有采集、原始录制/回放、数组显示、FFT/ADC 分析、带通/notch、CAR/median 公共参考和阈值 spike 检测，不能把这些全部列为待开发。
+NL_source 原版已经有采集、raw 录制/回放、数组显示、FFT/ADC 分析、带通/notch、CAR/median 参考和阈值 spike 检测。
 
-与 Open Ephys 的实际功能相比，优先缺的是：
+**preview2 又补上三块原先确实缺失的能力：**
 
-1. **可持续应用的在线分选规则**：PCA、多边形或波形盒选规则、对后续事件自动赋 unit ID；当前新增的候选分组只给已经留存的事件贴标签
-2. **完整分析事件归档**：把全程 spike 时间、波形、unit ID、配置版本写盘，并能重新打开；当前导出只是单个 lane 的有限留存快照
-3. **可配置参考与坏道管理**：已有全局 CAR/median，但没有参考通道集合、作用通道集合、分组参考及坏道排除
-4. **更稳健、能联合多电极的检测**：已有绝对/RMS 阈值，缺少中位数噪声阈值和 stereotrode/tetrode 式联合事件结构
-5. **TTL 事件流和 PSTH**：已有电压阈值触发录制，尚无采样坐标一致的外部事件流、试次条件和事件对齐统计
-6. **完整的信号/单元质量工作流**：已有 RMS、饱和、丢包和 FFT；尚缺统一 QC 报告、长期单元稳定性和更完整的分选质量指标
-7. **标准格式与自动离线分选接口**：没有 SpikeInterface/Kilosort/Phy 集成；这项属于进一步扩展，不能说 Open Ephys 默认就内置了 Kilosort
+1. **持续波形盒分类**：保存规则，并按实际生效的规则给后续完整波形事件赋候选 unit ID；多个规则同时命中明确标为 ambiguous，配置不兼容明确标为 incompatible
+2. **独立事件归档**：原始事件与波形从 detector 写入有界 writer，使用稳定 run/event ID，保留实际配置/规则版本；可重新打开、分页查阅和追加人工标签，不再靠显示 ring 保存全程结果
+3. **独立全文件离线分析**：输入按块读取、队列满时等待、EOF 排空 detector 和 writer，保留原始有效性信息；有取消、失败及最终提交状态
 
-本次预览补齐的是连续分析生命周期、可追溯事件时间、缺口/有效性处理、有限窗口的手工候选分组与 JSON 导出。**它仍不能称为已经达到 Open Ephys Spike Sorter 的完整在线分选能力。**
+因此，不能继续说“没有持续规则、完整事件归档或离线跑批”。**最终 clean 构建通过，64/64 CTest 通过，零失败，用时 254.02 秒；新增实际 Dummy 神经档案端到端也已通过。** 这些结果建立软件回归基线，但不能据此声称已全面达到或超过 Open Ephys。
 
-## 1. 对照口径
+**仍然明确缺少的主要能力：**
 
-- Open Ephys 以官方当前文档和 release 页面为依据；核查时 release 页面将 v1.1.0 标为 Latest。[OE-1]
-- “内置”与“可安装插件”分开计。Spike Sorter 文档表格与安装说明存在不一致，0.6.x 迁移说明明确它已移到独立仓库，因此这里称“官方可安装插件”。Online PSTH 也按其安装说明列为插件。[OE-2][OE-3]
-- “已具备”表示有效代码路径中已有该能力，不表示两个软件的参数、算法、交互或性能完全相同。
-- “部分具备”表示有基础能力，但欠缺表中列出的使用闭环。
-- “未实现”表示检查了当前 `src/`、构建源文件列表和相关调用路径，未找到可用实现；不是仅凭页面名称推测。
-- 没有把未进入构建的旧原型当成功能。`CMakeLists.txt:53–55,58–172` 明确限定编译源；`PreviewPipeline`/`AnalyzerPipeline` 等旧原型中的占位注释不能代表当前实际页面。实际 FFT 页面是 `AnalyzerPanel`。
+- PCA 投影、PCA 多边形分选；现有持续规则是 waveform boxes，不是自动聚类
+- MED/MAD 类稳健噪声阈值、参考/作用通道分组与坏道排除
+- stereotrode/tetrode 式多电极联合事件、跨通道特征与去重
+- 带统一源采样坐标的 TTL 事件流、试次条件及 PSTH
+- 完整信号 QC 报告、长期单元质量/稳定性与神经科学时频分析
+- SpikeInterface/NWB/Phy 等标准适配，以及可选自动离线 sorter
+- 通用可重组处理链/插件接口
+
+Open Ephys 的 Spike Sorter 是官方插件，支持波形盒与 PCA 手工分选；不能把 Open Ephys 本身说成默认内置 Kilosort。[OE-2][OE-6][SI-1][KS-1]
+
+## 1. 对照与验证口径
+
+- Open Ephys 依据官方文档和 release 页面；本次研究中页面将 v1.1.0 标为 Latest。[OE-1]
+- 内置和可安装插件分开计。Spike Sorter 的页面表格与安装说明有不一致，0.6.x 迁移说明明确它移入独立仓库，因此称“官方可安装插件”；Online PSTH 也按安装说明计为插件。[OE-2][OE-3]
+- **已实现**：在有效构建源和调用路径中已存在；不表示算法、交互或性能与对方等价。**本轮已验证**：列入最终 clean 构建与软件回归；范围仍受相应测试输入和断言限制。
+- **未实现**：检查 `src/`、构建列表及相应调用后，未找到可用实现。没有把 `PreviewPipeline`/`AnalyzerPipeline` 等未进入当前主程序构建的旧原型当成功能；实际 FFT 页面为 `AnalyzerPanel`。
+- 下列验证状态依据最终构建、64 项 CTest 终态与对应 LastTest 输出，区分测试目标数、内部断言数和事件数量，不将它们混加。
+
+### 从 preview1 到 preview2，哪些结论已经变了
+
+| 能力 | preview1 历史状态 | preview2 当前实现与边界 |
+|---|---|---|
+| 手工候选分组 | 框选 peak/P2P/energy 后，只给留存事件贴标签 | 原有历史标注保留；新增独立 waveform-box 规则，对后续事件持续分类。二者目的和持久化路径不同 |
+| 事件保存 | 单 lane 有限留存 JSON 快照 | 新增独立不可变事件档案、实际配置/规则版本和 append-only 标签；旧快照仍可用，但不是主档案 |
+| 离线分析 | 依赖回放与可淘汰订阅队列，不能保证全文件分析 | 新增不走 SessionHub 订阅的专用全文件任务，禁丢弃入队并排空尾部；实时路径的溢出仍必须显式报告 |
+| 配置可追溯性 | 主要记录 GUI 请求位置，不能代表实际应用时刻 | 新档案按每事件记录 crossing 使用的 detector/rule revision、完整定义和实际应用的 epoch/source-frame/continuity 边界；不等于已实现任意旧录制混合配置的自动逐段重放 |
 
 ## 2. 功能矩阵
 
-| 功能 | Open Ephys 基准 | NL_source 原版 | 本次预览版 | 仍要补什么 |
+| 功能 | Open Ephys 基准 | NL_source 既有基础 | preview2 当前状态 | 仍缺/适用边界 |
 |---|---|---|---|---|
-| 采集、原始录制、回放 | Source + Record Node + File Reader；可分别记录连续数据、spike 和事件 [OE-4][OE-5] | **已具备专有链路**：TCP、256×32-bit 帧、分卷 BIN、session.json、回放/seek | 增加录制无效帧区间及回放传播 | 专有 raw 格式可继续保留；缺标准数据适配器和完整分析事件记录，不能说“没有录制” |
-| 可重组处理链 | source/filter/sink、分支与插件机制 [OE-6] | **部分具备**：SessionHub 多订阅队列、独立显示/分析/录制 worker | 检测跟随会话，不再跟随 Spike 页是否可见 | 处理模块统一接口、配置快照、选择性旁路和处理图；无通用插件装载或可视化信号链 |
-| 带通、notch、LFP 基础 | Bandpass 内置；Notch 为插件；可用分支作不同频段 [OE-7][OE-8] | **已有 DSP**：Butterworth HP/LP、50/60 Hz notch、Wide/Spike/LFP 分支 | 保留；Spike 页使用 spike band | 不必重写滤波器；应补校准、幅频/相位/块边界验证。LFP 有算法分支不等于有完整 LFP 分析工作流 |
-| CAR/median 参考 | 内置 CAR 可分别选择参考通道、作用通道和 gain；同一同步流内处理 [OE-9] | **已有全局 CAR/median**：每帧全部 256 路形成参考 | 保留，参考变更重启分析区间并记元数据 | 缺参考/作用通道掩码、坏道排除、按电极组参考；空间 median 参考不等于检测用的时间域 MED/MAD 噪声估计 |
-| Spike 阈值检测 | 内置 Detector：µV、STD、MED；single/stereotrode/tetrode [OE-10] | **部分具备**：绝对/RMS 阈值、极性、不应期、逐 lane 阈值覆盖、跨块波形窗 | 事件增加源时间/物理位点/连续段；无效帧隔离 | 缺 MED/MAD 模式、联合多电极事件和相关参数 UI；当前为每 lane 独立检测 |
-| 波形对齐与事件定义 | Detector 产生 spike 事件供下游处理 [OE-10] | 阈值穿越对齐的留存波形 | 明确保存 crossing 坐标和 pre_samples | 当前时间是因果滤波后的阈值穿越，不是波峰或真实神经元发放时刻；若要峰对齐/亚采样对齐，须单独实现并记录语义 |
-| 多电极联合检测/特征 | Detector 可将 2/4 通道作为一个 electrode [OE-10] | **未实现对应分组**：256/512 个独立 lane | 仍是单 lane 波形、单 lane 特征 | 定义电极组、邻域和跨通道去重；不能把“通道多”当成“多电极联合分选” |
-| PCA 与在线手工分选 | Spike Sorter：波形盒、多盒组合、PCA 空间多边形；规则应用到进入的 spike，写 sortedId [OE-2] | **未实现** | **新增部分能力**：peak/P2P/energy 散点、框选/单点选择、给留存事件标 candidate ID | 缺 PCA、波形空间门、持久化分类规则、后续事件自动分类、规则冲突处理；当前标签会随事件淘汰/分析重置消失 |
-| Raster、ISI、模板查看 | Spike Viewer 及相关分析插件；PSTH 插件可按 unit 展示 [OE-11][OE-3] | 波形叠加、阈值和近实时计数；无完整单元分析 | **新增**源时间 raster、同连续段 ISI、均值/标准差波形 | 仅保留窗口；缺全会话时间趋势、ACG/CCG、稳定性及完整单元质量评估；均值波形不是模板匹配 sorter |
-| 采集信号 QC | Quality Monitor 为插件：RMS、频谱、快照/饱和、阈值活动；可导出结果 [OE-12] | **部分具备**：RMS/P2P/DC/饱和热图、packet loss、FFT/ADC 性能指标 | 新增分析覆盖、缺失/无效/未验证帧、边界事件、pending 窗告警 | 缺统一分组 QC、工频噪声判据、坏道建议/人工确认及可保存 QC 报告；传输完整性不等于电极或分选质量 |
-| 频谱/时频/LFP | Spectrum Viewer 插件含功率谱和 spectrogram [OE-13] | **已有 FFT/PSD**、窗口选择、SNDR/SNR/ENOB/IRN；滤波器含 LFP 分支 | 本次未扩充这条分析链 | 缺滚动时频图、频带统计和事件对齐 LFP；不能把现有 ADC 测试型 FFT 页面说成“没有频谱” |
-| TTL、试次、PSTH | Online PSTH 接收事件+spike，支持 TTL/消息条件 [OE-3] | **仅相关基础**：模拟电压阈值触发开始录制；StimTrigger 含 ExternalTTL 枚举 | 未新增 TTL 输入/事件流 | 缺带源 sample index 的事件对象、TTL 边沿解码/回放/录制、试次条件、PSTH；枚举和触发录制都不等于该闭环 |
-| 全程分析数据持久化 | Record Node 可保存 incoming continuous、spikes、events；在 Sorter 后记录 sorted IDs [OE-4][OE-2] | raw/session 存储已实现，但 spike 只在有界 snippet ring | **部分补齐**：单 lane 留存快照 JSON，时间/标签/波形/配置/覆盖信息 | 缺全程 append-only spike/event 档案、标签/规则保存与重新载入；当前导出不能替代全程记录 |
-| 分析复现、无损离线跑批 | Open Ephys 配置与记录体系可支持重建处理链；具体处理器变更记录仍需逐项核查 [OE-6][OE-4] | 原始回放、TDM 元数据、时间线基础 | 保存初始/请求配置变更；回放明确使用当前配置 | 缺逐样本生效配置版本、按原设置重算、端到端不丢分析块的跑批模式；不能因 replay reader 有背压就宣称全链路无损 |
-| 标准格式/离线自动分选 | 官方记录/读取体系涵盖 Binary、Open Ephys、NWB；自动离线 sorting 另看 SpikeInterface/Kilosort [OE-6][SI-1][KS-1] | 有 MATLAB 通道二进制导出/加载脚本；无对应通用适配 | 增加自定义 JSON 快照，不是 NWB/Phy 格式 | 可先做 SpikeInterface Recording adapter，再接 CPU sorter/可选 Kilosort；没有必要把 Python sorter 重写成 C++ |
+| 采集、raw 录制/回放 | Source、Record Node、File Reader；连续数据/spike/event 记录 [OE-4][OE-5] | TCP、256×32-bit 帧、分卷 BIN、session.json、seek；preview1 加入无效帧区间传播 | **保留并扩展**：raw 与分析 sidecar 分离 | 专有格式不是标准适配器；事件归档是否启用、输入是否有缺口须单独判断 |
+| 处理链与生命周期 | source/filter/sink、分支与插件机制 [OE-6] | SessionHub 订阅、独立 worker；preview1 已让检测不随切页停止 | **扩展**：producer → detector → writer 正常排空；专用离线任务 | 无通用处理图/插件 loader；停止排空不能追回此前源丢失或实时订阅丢失 |
+| 滤波、notch、LFP 基础 | Bandpass 内置；Notch 插件；Splitter 可建不同频段 [OE-7][OE-8] | Butterworth HP/LP、50/60 Hz notch、Wide/Spike/LFP DSP 分支 | **已有，保留** | 有 LFP DSP 分支不等于完整 LFP 分析；没有必要重复重写现有滤波器 |
+| 参考与坏道 | CAR 可选参考通道、作用通道和 gain，同步流内处理 [OE-9] | 全局 CAR/median：每帧所有 256 路参与 | **部分具备**，规则兼容性包含 reference | 缺参考/作用掩码、分组参考、坏道排除；空间 median 不是时间域 MAD 噪声估计 |
+| 阈值 spike 检测 | µV/STD/MED；single/stereotrode/tetrode [OE-10] | 固定/RMS 阈值、极性、不应期、逐 lane 覆盖、跨块波形窗 | **部分具备**；事件固定实际 detector revision | 缺 MED/MAD、多电极联合事件；RMS 噪声估计仍会受大事件/伪迹影响 |
+| 波形/事件定义 | Detector 产生下游 spike 事件 [OE-10] | 因果滤波后的阈值穿越对齐 | **可追溯**：crossing 源帧、pre_samples、gain、stride、epoch/segment | 不是峰对齐、亚采样对齐或真实生物发放时刻；变换必须保持明确语义 |
+| 多电极联合检测 | 2/4 通道可构成一个 electrode [OE-10] | 多 lane 独立检测 | **仍未实现联合分组**；规则按物理电极/配置匹配 | 多通道数量不代表联合排序；TDM 非同时采样也不能直接当同步 tetrode |
+| 波形盒在线分类 | 多个 waveform box、按规则赋 sortedId [OE-2] | preview1 只有历史候选标注 | **新增实现，本轮已验证**：多盒 AND、后续事件分类、JSON 保存/读取、实际应用版本、ambiguous/incompatible | 属用户定义候选类别；不是自动发现神经元。规则编辑请求与实际应用确认已分开 |
+| PCA/多边形分选 | PCA 投影、多边形、重新 PCA [OE-2] | peak/P2P/energy 特征散点 | **仍缺 PCA**；持续分类采用时间-电压盒 | 后续应增加固定训练/测试边界、投影版本和 PCA 变化后规则迁移/失效策略 |
+| Raster、ISI、单元 QC | Spike Viewer、PSTH 等分析插件 [OE-11][OE-3] | preview1 加入源时间 raster、连续段内 ISI、均值±SD 波形 | **已有窗口视图 + 新增档案浏览** | 当前统计视图仍以有限快照为主；分页保存不是全会话 ACG/CCG、漂移与稳定性分析 |
+| 信号 QC 与频谱 | Quality Monitor、Spectrum Viewer 插件 [OE-12][OE-13] | RMS/P2P/DC/饱和/丢包、FFT/PSD、SNDR/SNR/ENOB/IRN、分析覆盖告警 | **部分具备**；归档状态与源完整性分别显示 | 缺统一 QC 报告、工频判据、坏道工作流、滚动 spectrogram 与事件对齐 LFP；不能说“没有频谱” |
+| TTL/试次/PSTH | TTL/消息条件 + spike 的事件对齐统计 [OE-3] | 模拟电压阈值触发录制；ExternalTTL 枚举 | **未新增该闭环** | 缺 TTL 边沿事件的源坐标、录制/回放、条件与试次模型、PSTH；触发录制不等于 PSTH |
+| 完整窗事件归档 | Record Node 可在 Sorter 后保存 spikes、events 与 sorted ID [OE-4][OE-2] | raw 存储 + bounded ring；preview1 单 lane JSON | **新增实现，本轮已验证**：独立 writer、稳定 run/event ID、原始波形/自动分类不可变、追加标签、异步重开/分页 | 实时开档只覆盖开档后输出的完整窗事件；未开启时不能回填已淘汰历史。源缺口/边界排除仍显式保留 |
+| 专用离线跑批/复现 | 文件输入与配置链支持离线使用，具体插件语义须核查 [OE-5][OE-6] | 旧定时回放不能保证分析订阅不丢块 | **新增实现，本轮核心与集成验证通过**：冻结任务配置、全文件 pull、禁丢弃入队、EOF drain、取消/失败/finalizing | 完成的是本次指定配置的检测/盒规则分析；不自动恢复任意旧混合配置。不补回原始文件已缺失的数据 |
+| 标准格式/自动离线 sorter | Binary/Open Ephys/NWB；自动排序另看 SpikeInterface/Kilosort [OE-6][SI-1][KS-1] | MATLAB 通道二进制导出和 loader | 自定义 versioned sidecar 与规则 JSON 已新增 | SpikeInterface/NWB/Phy 适配、自动聚类/模板排序/漂移校正仍未集成；“离线分析”不等于“自动离线 spike sorting” |
 
-## 3. 关键代码证据与边界
+## 3. 代码证据
 
-### 3.1 已有功能，不能重复算作“本次新加”
+### 3.1 原版已有，不能算成本次新做
 
-- **全局参考**：原版 `git show f4780565:src/service/spike_detect_worker.cpp` 的 `run():226–250` 已实现 CAR 与 median。当前对应 `src/service/spike_detect_worker.cpp:289–325`，对 `kChannelsTotal` 全部通道求参考，没有参考/作用通道列表参数。显示链 `src/network/data_sorter.cpp:207–244` 也实现同样机制。
-- **滤波/阈值**：`src/signal/spike_filter.h:43–62` 的 `SpikeProcConfig`；`spike_filter.cpp:99–114,183–256` 的 `configure/processChannel`。RMS 是平方值的 EMA，约 250 ms 时间常数；每通道独立状态。这些文件在本次工作区没有被改动。
-- **采集 QC**：`src/network/data_sorter.cpp:249–269` 计算 mean、去均值 RMS、P2P、ADC 轨到轨饱和和 packet loss；`src/ui/widgets/activity_map_view.h:17–23` 明确四种热图指标。
-- **FFT**：`src/ui/analyzer_panel.cpp:649–690,1696` 有 FFT 开关、点数、窗口、PSD/噪声密度与后台计算；`src/signal/sndr_calculator.cpp:197–239,316–333` 有有效计算结果，不能被旧 `AnalyzerPipeline` 占位文件误导。
-- **数据导出**：`src/io/matlab_channel_exporter.cpp:136–170,250–328,541–598` 已有 ADC/TDM 二进制导出、MATLAB loader 和时间线处理；但没有 SpikeInterface/NWB/Phy 适配。
+- **参考**：原版 `spike_detect_worker.cpp` 的 `run():226–250` 已有 CAR/median；preview2 对应 `src/service/spike_detect_worker.cpp` 的 `run()` 参考计算（核查时 :521 起）。参考仍对 `kChannelsTotal` 全部通道求值，没有参考集合/坏道掩码。显示链 `src/network/data_sorter.cpp:207–244` 也有同类实现。
+- **滤波/阈值**：`src/signal/spike_filter.h:43–62` 的 `SpikeProcConfig`；`.cpp:99–114,183–256` 的 `configure/processChannel`。RMS 为平方值 EMA，约 250 ms 时间常数；各通道独立状态。
+- **信号 QC**：`src/network/data_sorter.cpp:249–269` 计算去均值 RMS、P2P、DC、ADC 轨饱和和丢包；`src/ui/widgets/activity_map_view.h` 的 `MetricMode` 有 RMS/P2P/Mean/Saturation。
+- **FFT 与导出**：`src/ui/analyzer_panel.cpp` 的 FFT 控件与后台分析、`src/signal/sndr_calculator.cpp:197–239,316–333` 的频谱/指标、`src/io/matlab_channel_exporter.cpp` 的 ADC/TDM 导出均已存在。旧占位 pipeline 不代表这些实际页面未实现。
 
-### 3.2 本次实际新增了什么
+### 3.2 preview2 持续规则：不再只是留存事件标签
 
-- `src/signal/spike_event.h:7–35`：增加 epoch、continuitySegment、sourceFrame、sourceSampleRate、ADC/电极/TDM phase、gain、stride、preSamples、候选 ID。
-- `src/service/spike_detect_worker.cpp:91–145,254–286`：原子提交完整 waveform+event；源坐标关联；缺口/无效帧断开 detector 历史，未完成后窗单独计数。
-- `src/ui/spike_panel.cpp:635–721,837–878,894–909`：检测跟随 session；切页仅停止绘图；累计 Hz 使用实际处理的 lane 源时间。原版 `onDeactivated():641–650` 会停止检测，原版 `refresh():588` 用显示间隔作速率分母。
-- `src/signal/spike_sorting_model.h:10–38,41–72` 与 `.cpp:18–41,108–169`：peak/P2P/energy、单 lane 有限快照、均值波形/标准差、连续段内 ISI。**未做 PCA、聚类、自动 unit 隔离或模板匹配。**
-- `src/ui/widgets/spike_sorting_widget.cpp:86–115,290–323,458–464`：框选散点后按事件 sequence 赋候选标签。`spike_snippet_store.h:91–93` 与 `.cpp` 的 `setCandidateUnit` 仅处理仍留存的事件，没有把框选区域保存成未来事件的分类器。
-- `src/io/spike_event_exporter.cpp:45–121`：单 lane 原子 JSON 导出；`scope` 明确是 retained window。`src/signal/spike_snippet_store.h:55,125–133` 是 128 MiB 预算的 ring，不是全程归档。
-- `src/io/session_manifest.h:15–20,37,51–84`、`src/network/replay_controller.cpp:308–324`：记录和传播 file-frame 无效区间。
-- `src/ui/spike_panel.cpp:724–749,846–865`：配置变更记的是请求源帧位置，并明确回放使用当前设置；尚不能承诺原始混合参数运行的逐帧复现。
+- `src/signal/spike_rule_classifier.h` 的 `SpikeWaveformBox/SpikeCandidateRule/SpikeRuleContext/SpikeRuleSet`：时间 ms 相对 causal crossing、电压为 input µV；一候选的多个盒用 AND。
+- `src/signal/spike_rule_classifier.cpp:445–525` 的 `load/save/classify`：规则可持久化；零命中为 Unassigned，唯一命中为 Assigned，多候选命中为 Ambiguous；物理位点、采样率、gain、reference、滤波/阈值/窗口不符为 Incompatible。
+- `src/service/spike_detect_worker.cpp:137–225` 的 `revisionMetadataLocked/applyConfigurationBoundary`：在处理边界应用请求快照，注册实际 detector/rule revision，并记录 `applied_epoch`、`applied_source_frame`、`applied_continuity_segment` 与 `boundary_semantics`。`:268–278` 给 pending crossing 固定快照/上下文；`:314–320` 在后窗完整后按该快照分类。因此规则编辑不会倒改先前 crossing；应用边界不再仅由 GUI 请求位置推测。
+- `src/ui/widgets/spike_rule_editor.cpp:137–171,186–251`：盒绘制/数值编辑、JSON 草稿载入/保存、requested/applied 区分；`src/ui/spike_panel.cpp:1103–1129` 将服务的实际上下文和应用版本接到编辑器。
+- 原有 `SpikeSortingWidget` 的散点框选仍是历史标注，**不**因为新增 rule editor 就变成 PCA 分类器。`SpikeSnippetStore::setCandidateUnit` 通过注释回调保存有归档身份的人工标签；未进入档案的留存事件仍只有窗口内标签。
 
-### 3.3 与 spike sorting 直接相关的硬约束
+### 3.3 preview2 事件档案：与显示 ring 解耦
 
-1. **源帧率不等于 TDM 每电极采样率。** `src/ui/spike_panel.cpp:100–106`：TDM 模式每电极 fs = 源 fs / 4，并只建立当前相位对的 512 个 lane。若源帧率为默认 20 kHz，每电极是 5 kHz；Nyquist 为 2.5 kHz。`:361` 将 spike 低通限制为 `min(6000, fs×0.45)`，此时是 2.25 kHz。不能用软件补回没有采到的高频，也不能把源帧率直接填进离线 sorter 的每通道采样率。
-2. **当前只分析 512/1024 TDM 物理位点。** 原始文件保留四相数据，不代表实时 detector 处理了全部四相。若要扩到 1024，必须分离显示选择与分析选择，并验证每位点时间线/吞吐量。
-3. **gain 仍是人工统一值。** `spike_panel.cpp:122–128` 为 60×/180×选择，`spike_event_exporter.cpp:18` 明确未由硬件验证；分选前要确认每通道校准、极性、ADC 转换和物理 geometry。
-4. **已有背压不是离线分析零丢失保证。** `replay_controller.cpp:273–278` 对 reader 入队提供背压，但 `session_hub.cpp:550–561` 的订阅分发仍用可淘汰队列。预览会报告分析缺口；完整离线基准应使用能等待处理完毕的独立 delivery/drain 路径。
+- `src/signal/spike_event.h` 增加 `runId/eventId/detectorRevision/ruleRevision/classification`。
+- `src/service/spike_detect_worker.cpp:228–245` 的 `publishCompletedEvents`：先赋稳定 ID，经 callback 送不可变事件/波形，再插入显示 ring。存储不从 ring 抓取数据，因此不会因 ring 淘汰而失去已接受的归档事件。
+- `src/io/spike_event_archive.h` 的 writer/reader API 与 `.cpp:185–243,268–315`：有界队列、revision 先注册、显式终态和 finish marker；实时队列耗尽是 Failed，不悄悄截短后报成功。离线 writer 可阻塞等待。
+- `src/io/spike_event_archive.cpp:459` 的 `readPage` 有分页/扫描预算；`:519–545` 的 `appendManualLabel(s)` 校验稳定身份并追加历史，保留原始自动分类/波形。
+- `src/ui/widgets/spike_archive_browser.cpp:219–334`：重开、分页、标签追加与独立重验均在异步 worker；`src/ui/spike_panel.cpp:292–328` 将控件接入实际页面。实际页面端到端与独立 widget 测试均已通过，验证范围见第 5 节。
+- 详见 [档案格式](spike_event_archive_format.md)、[规则格式](spike_rule_format.md)、[GUI 合约](spike_archive_rule_widgets.md)。冷启动重开/查询仍可能线性扫描，不能宣称大档案随机访问为常数时间；校验/恢复也不是断电 fsync 耐久性保证。
 
-### 3.4 “未实现”如何核查
+### 3.4 preview2 专用离线任务与停止顺序
 
-对 `src/` 和 `CMakeLists.txt` 检索并阅读相应命中：PCA/主成分、PSTH/事件对齐、SpikeInterface/Kilosort/NWB/Phy、坏道/参考通道集合、MED/MAD、插件装载接口；同时检查有效构建列表、检测/导出模型和 GUI 控件。无关子串命中已排除。
+- `src/service/spike_offline_analysis.cpp:81–112`：独立 ReplayController，恢复 manifest 的源 fs/TDM/validity，冻结本次配置，并新建 sidecar。
+- `:130–166`：事件及 revision 使用 OfflineBlocking 写入；输入 `queue->push(..., false, ...)` 禁止丢弃，满时检查取消/失败并等待，不走 SessionHub 的实时订阅。
+- `:173–203`：EOF 停 producer、请求 detector drain、检查 processed == total、再完成 writer；取消/读写故障分支独立。提交 accepted tail 时 `cancellable=false/finalizing=true`，避免宣称此时仍可取消。
+- `src/service/session_hub.cpp` 的 `sourceDrained`，与 `src/ui/spike_panel.cpp:1085–1100` 的 `drainWorker`，构成普通停止/回放 EOF 的 producer → detector → writer 屏障；EOF 不完整后窗转为边界排除，不能伪造后续样本。
+- 实时订阅仍有可淘汰策略：`src/service/session_hub.cpp:583`。**专用离线任务不丢软件输入块**，不能推导实时采集永不丢失，也不代表 source 原先就完整。
 
-- `SorterWorker`/`DataSorter` 是帧解析、拆通道/显示数据处理，不是神经元 spike sorter：见 `src/network/sorter_worker.h:20–37` 的输入/输出接口。
-- `src/core/stim_protocol.h:14,25` 仅有 `ExternalTTL` 等触发类型声明；不能据此认定 TTL 事件采集链已完成。
-- `src/service/session_hub.h:87–99` 的 `TriggerConfig` 和 `command_center_main_window.cpp:272` 实际作用是电压穿越后开始录制，不产生供 PSTH 使用的逐事件时间序列。
-- 未发现跨通道 `SpikeEvent` 波形结构、PCA 投影器、可持续分类规则、标准排序文件适配器或通用插件 loader。
+### 3.5 仍缺能力的核查
 
-## 4. 建议补齐顺序与验收
+重新检索有效源码与构建列表中的 PCA/主成分、MAD/median absolute deviation、坏道/参考集合、PSTH、SpikeInterface/Kilosort/NWB/Phy 和插件 loader，并检查模型/控件：未发现可用实现。`SpikeEvent` 仍是单 lane 波形；`SpikeRuleSet` 是按单个物理电极兼容上下文匹配，没有多电极 waveform 特征。
 
-### 第一阶段：先把已有检测结果完整留住
+`SorterWorker/DataSorter` 仍是帧解析、拆通道/显示处理，不是神经元聚类器。`StimTrigger::ExternalTTL` 枚举和 `SessionHub::TriggerConfig` 的电压触发录制，不能当作完整 TTL 事件采集与 PSTH。
 
-- 实现全部 lane 的事件流写盘与可重新打开的分析会话：原始 recording 标识、源采样坐标、有效性、检测配置版本、波形和候选标签分别有明确 schema。
-- GUI 仍只保留有限显示窗口；事件归档不能因 ring 淘汰、切页、慢绘制而遗漏。
-- 离线跑批提供 EOF drain、取消/失败/缺口结果，能等待每个分析订阅者完成。
-- 验收：超过 ring 容量、慢消费者、seek、分卷、EOF pending、取消及故障恢复；事件数量与源坐标一致，缺失显式记录。同一文件不同 replay 速度不改变结果。
+## 4. 必须保留的边界
 
-### 第二阶段：补到 Open Ephys 的实用在线分选级别
+1. **TDM 每电极采样率仍为源帧率 / 4。** `src/ui/spike_panel.cpp:108–115`；默认源帧率 20 kHz 时每电极 5 kHz，Nyquist 2.5 kHz；`:437` 的低通上限为 `min(6000, fs×0.45)`，此时 2.25 kHz。分类器不能补回未采到的高频。
+2. **仍只分析所选 512/1024 TDM 位点。** 四相 raw 都记录，不等于 detector 同时分析四相；专用离线任务也记录这一 scope，见 `spike_offline_analysis.cpp:92,106`。
+3. **gain 仍为人工统一 60×/180×，未逐通道硬件验证。** 新规则/档案会固定其上下文，但保存参数不等于校准已正确。
+4. **实时开档的 scope 有起点。** `src/service/neural_archive_controller.cpp:38–40,104–106` 明确只覆盖开档后输出的完整窗事件，`whole_source_coverage_claimed=false`。不能恢复开档前已淘汰记录；停止档案也不等于停止采集。
+5. **Completed 是档案写入完成，不自动证明源完整。** `spike_offline_analysis.cpp:40–53` 分别报告缺失/无效/未验证、边界排除及处理总量。有效性未知的 raw BIN 可以处理，但不能变成“已验证完整”。损坏档案只能显示已验证前缀。
+6. **实际 revision 可追溯，不等于自动重演所有旧会话配置。** 新事件能指向真正应用的参数/规则；离线请求仍用本次冻结的设置，保存的旧来源配置不会自动逐段回灌。跨 run 结果比较还须指定配置和身份映射。
+7. **规则候选 ID 不是已证明的单神经元。** 盒选、少量真值测试和可重开档案建立的是功能正确性，不能替代真实记录上的单元隔离/漂移质量分析。
 
-- 增加 MED/MAD 噪声估计、参考/作用通道分组与坏道掩码。
-- 增加 1/2/4 通道电极组、共享 waveform window 和去重策略；TDM 的非同时采样要保留各通道真实坐标，不能直接假装同步 tetrode。
-- 增加固定/可重算 PCA、PCA 多边形和波形盒规则；规则在后续事件上执行，并把规则版本/unit ID 写到第一阶段的事件档案。
-- 验收：相同参数重复运行一致；训练/绘制规则与测试事件分开；边界条件、规则冲突、重新 PCA 后旧规则失效/迁移有明确行为；合成多通道重复事件不重复计作多个神经元。
+## 5. 最终软件验证结果
 
-### 第三阶段：实验分析工作流
+**最终结果：clean 构建完成；64/64 CTest 通过，零失败，总用时 254.02 秒。** 已核查 `build-preview2-final-clean.log` 无编译器 warning/error 诊断、`ctest-preview2-final-clean.log` 的终态，以及最终 `Testing/Temporary/LastTest.log` 的详细输出。
 
-- 增加统一信号 QC：已知采样率下的工频、噪声、饱和、掉线判据和 JSON/图像报告；低频率不能直接标定为坏电极。
-- 增加 TTL/消息事件模型、事件录制和回放，再加试次 raster/PSTH 与必要的 LFP 事件平均。
-- 增加滚动 PSD/spectrogram；保留现有 ADC 性能分析页面。
-- 验收：已知频率/幅值波形、已知 TTL 时间、跨连续段/seek、不同 bin 宽度和未完成试次；不能把操作系统收到消息时间当成采样时刻。
+| 验证范围 | 最终确认结果 | 能说明什么 / 不能说明什么 |
+|---|---|---|
+| preview2 主程序与全部目标 | **clean 构建完成；64/64 测试通过** | 包括原有功能和新增神经档案相关回归；不是实体硬件或所有未来输入条件的保证 |
+| 持续规则核心 | **116 个断言；240 个后续 held-out 合成事件**，目标通过 | 验证规则几何、兼容性和后续事件分类；不是 240 个真实神经元或跨数据集生物分选准确率 |
+| Detector/规则 worker | **398 个断言**，含 **768 事件**跨块一致性及实际应用边界 | 验证事件身份、配置/规则边界与 chunk parity；不是硬件延迟/吞吐基准 |
+| 归档、controller、offline、连续生命周期、源时间线 | **对应 5 个 CTest 目标全部通过** | 覆盖记录/重开、有效性、停止顺序和离线处理；具体场景以各测试源码和格式文档为准 |
+| 专用 offline 的实际 Dummy 字节 | **32,000 帧、3,991 个归档事件、128 个显示留存事件** | 验证档案独立于有限 ring；Dummy 是模拟源，不是实体 ADC/电极验收 |
+| 独立归档/规则 widget | **323 项检查，0 失败** | 覆盖控件、分页、规则应用/标签历史与异步生命周期；独立 widget 与实际页面验证分别保留 |
+| 实际 Spike 面板 Dummy 神经档案端到端 | **1,631 项检查通过，12.51 秒** | 覆盖实际采集、超出显示留存的事件保存、后续分类/歧义、手工标签重开、EOF 排空、离线与回放逐事件/float 波形一致、取消及源文件哈希不变 |
+| 完整主窗口与主题回归 | **full_app_visual_smoke 通过**；实际回放保存 **3,758 个事件**、应用规则 revision **1**；四套现有主题覆盖 | 验证原有完整窗口中的新功能和主题接线；不扩大为所有分辨率/平台均已人工验收 |
 
-### 第四阶段：自动离线分选与高密度数据
+早期运行中的测试时序、输入长度及源坐标假设已修正并重跑；它们不再是当前未解决失败。最终公开判断以上述 clean 终态为准，不把中间的失败或先前 57 项基础套件当作当前总结果。断言数量与 CTest 目标数量不同，不相加。详见 [Dummy 神经档案集成覆盖](dummy_neural_archive_coverage.md)。
 
-- 用独立进程/可固定版本的 Python 环境接 SpikeInterface；先接 CPU 可跑的排序器，再按 geometry、数据质量和硬件条件选择 Kilosort。Kilosort 的推荐加速路径需要检查 NVIDIA/PyTorch 环境。[SI-1][KS-1]
-- 先做数据适配：每通道有效 fs、gain、offset、单位、geometry、坏道、连续段和缺口，明确哪些预处理已做，避免双重滤波/参考。
-- 后续结果导入单位模板、全程 firing rate、ISI/ACG/CCG、幅度/漂移和质量指标；保留人工审查。
-- 验收：ground truth 按明确容差匹配（SpikeInterface 默认 0.4 ms）、报告 precision/recall、agreement、过分裂/合并和未匹配单位；无 ground truth 时只能说一致性/QC，不能说准确率。[SI-2]
+## 6. 下一步优先级与验收标准
 
-## 5. 标准数据与测试结论应怎么解释
+### P0：保持本轮已通过的软件回归，补实体硬件验收
 
-- **单通道 Quiroga**：适合阈值检测、噪声、重叠及单通道分组测试；复制成 256 路只验证传输、GUI 和部分负载，不会变成多电极 ground truth。[DATA-1]
-- **小型 MEArec**：官方示例 `mearec_test_10s.h5` 为 32 通道、32 kHz、10 s、10 个真值单位；适合多通道导入/事件匹配/回归。39.06 MiB 是 float32 trace 数据体积，不等于 HDF5 下载总大小。10 s 不足以验证长时漂移。[DATA-2]
-- **更长、不同噪声和漂移条件**：应使用分开的 seeded 合成测试集；最终再加 paired 真实记录。合成、hybrid 注入和只覆盖少数细胞的 paired truth 必须分开报告。[DATA-3]
-- **检测测试不是 sorting 测试**：当前实现尚未自动预测真实 unit ID，不能把源数据的 truth 标签原样返回，再报告成分选准确率。
-- 本报告是代码与功能对照，不报告未执行的硬件验收或本机实时吞吐结果；最终构建、测试数量和标准数据指标见对应验证报告。
+- 已通过的实际 GUI 用例继续作为发布回归：开档/停档、正常源停止、EOF、配置变更、seek、关闭重开、标签追加、规则草稿/请求/实际应用、取消和不可取消提交阶段。
+- 独立 reader 重开核对 event ID、原始波形、revision、标签历史；超过 ring 容量、慢 writer、错误恢复后仍不把前缀误报完整。
+- 同一 recording 的专用离线结果在不同块大小/慢盘条件下相同；对比定时回放时必须先核对覆盖范围与相同配置。保存源文件/manifest 哈希不变。
+- dark/light 及已有主题、compact 布局、原有采集/录制/触发/SPI 页面继续回归。后续实体硬件要另测 gain、时钟、网络/磁盘持续吞吐、电极映射和刺激路径；没有硬件结果时明确列为未验证。
+
+### P1：补 Open Ephys 在线分选仍缺的核心能力
+
+- PCA 训练/投影、多边形规则、重新 PCA 后规则版本/兼容性；不要让训练样本直接充当评测样本。
+- MED/MAD 噪声阈值、参考/作用通道分组与坏道掩码；验证坏道不会污染参考、噪声估计或电极映射。
+- 1/2/4 通道 electrode group、联合 waveform、邻域去重；明确 TDM 非同时采样策略。验收重叠事件、边界、噪声水平、漂移以及 512/1024 覆盖。
+
+### P2：实验事件与神经分析工作流
+
+- 先建可录制/回放的 TTL/消息源坐标事件，再做 trial/raster/PSTH；用已知 TTL 时间、不同 bin 宽度和未完成试次验证。
+- 增加统一信号 QC、工频/频带统计、spectrogram 与事件对齐 LFP，保留现有 ADC 性能分析。
+- 在完整档案上做全会话 firing rate、ACG/CCG、幅度/稳定性和人工审查；不能用短留存窗口代替长期指标。
+
+### P3：标准适配与自动离线分选
+
+- 先实现 SpikeInterface Recording adapter，完整表达 fs/gain/offset/单位、geometry、bad channels、segment 和 gap，再接 CPU sorter 或条件合适时的 Kilosort。[SI-1][KS-1]
+- 同时明确哪些预处理已做，避免双重滤波/参考；输出标准 unit/spike 数据并保留算法版本、配置、输入校验值和人工修改历史。
+- 用 ground truth 指定匹配容差，报告 precision/recall、agreement、过分裂/合并和未匹配单位。SpikeInterface 默认匹配容差 0.4 ms；没有真值时只能报告一致性/QC。[SI-2]
+
+## 7. 标准数据如何用
+
+- **单通道 Quiroga**：适合阈值/噪声/重叠及单通道规则测试。复制成 256 路只验证传输和部分负载，不会形成多电极 ground truth。[DATA-1]
+- **小型 MEArec**：官方 `mearec_test_10s.h5` 为 32 通道、32 kHz、10 s、10 真值单位；适合多通道导入、匹配和回归。39.06 MiB 是 float32 trace 体积，不是完整下载大小。10 s 不够验证长期漂移。[DATA-2]
+- **不同噪声/漂移的长记录**：使用分开的 seeded 合成集，再加 paired 真实记录。合成、hybrid 注入和只标注少数细胞的 paired truth 分开评价。[DATA-3]
+- preview2 已能执行用户定义盒规则，但仍没有自动发现/拟合所有神经元的 sorter。不能把注入的 truth 标签作为预测结果，也不能用“事件成功写盘”代替分选准确率。
+- 软件测试不验证实体 FPGA 时序、网络极限、硬件 gain、ADC 噪声、电极连接、刺激安全或生物单元隔离。
 
 ## 官方依据
 
