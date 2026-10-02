@@ -48,16 +48,6 @@ double channelUnitValue(int channel, int multiplier, int offset)
     return static_cast<double>((channel * multiplier + offset) % 1000) / 999.0;
 }
 
-bool isStreamCommand(const QByteArray &command)
-{
-    return command.trimmed().toLower().startsWith("ctre");
-}
-
-bool isStopCommand(const QByteArray &command)
-{
-    return command.trimmed().toLower().startsWith("stop");
-}
-
 int argumentPort(const QStringList &arguments, const QString &name, int fallback)
 {
     const QString prefix = name + QLatin1Char('=');
@@ -85,6 +75,9 @@ DummyStreamServer::DummyStreamServer(QObject *parent)
     m_streamTimer->setTimerType(Qt::PreciseTimer);
     m_streamTimer->setInterval(kBatchIntervalMs);
     connect(m_streamTimer, &QTimer::timeout, this, &DummyStreamServer::sendBatch);
+    m_protocol.rec.fill(0x0060);
+    m_protocol.dac.fill(0x8000);
+    m_protocol.dacCt.fill(0x0000);
     resetPhases();
 }
 
@@ -154,48 +147,157 @@ bool DummyStreamServer::start(int controlPort, int dataPort, QString *error)
 
 void DummyStreamServer::acceptSinglePortClients()
 {
-    while (m_controlServer->hasPendingConnections()) {
-        QTcpSocket *socket = m_controlServer->nextPendingConnection();
-        m_controlClients.insert(socket);
-        connect(socket, &QTcpSocket::readyRead, socket, [this, socket]() {
-            const QByteArray command = socket->readAll();
-            if (isStreamCommand(command)) {
-                const bool firstStream = m_streamClients.isEmpty();
-                m_controlClients.remove(socket);
-                m_streamClients.insert(socket);
-                if (firstStream) {
-                    resetPhases();
-                }
-            } else if (isStopCommand(command)) {
-                socket->disconnectFromHost();
-            } else {
-                socket->write(QByteArray(12, '\0'));
-            }
-        });
-        connect(socket, &QTcpSocket::disconnected, socket,
-                [this, socket]() { removeClient(socket); });
-    }
+    acceptControlClients();
 }
 
 void DummyStreamServer::acceptControlClients()
 {
     while (m_controlServer->hasPendingConnections()) {
         QTcpSocket *socket = m_controlServer->nextPendingConnection();
+        socket->setReadBufferSize(4096);
         m_controlClients.insert(socket);
-        connect(socket, &QTcpSocket::readyRead, socket, [this, socket]() {
-            const QByteArray command = socket->readAll();
-            if (isStreamCommand(command)) {
-                m_dualPortArmed = true;
-                resetPhases();
-            } else if (isStopCommand(command)) {
-                m_dualPortArmed = false;
-            } else {
-                socket->write(QByteArray(12, '\0'));
-            }
-        });
+        m_commandBuffers.insert(socket, {});
+        connect(socket, &QTcpSocket::readyRead, socket,
+                [this, socket]() { readControlCommands(socket); });
         connect(socket, &QTcpSocket::disconnected, socket,
                 [this, socket]() { removeClient(socket); });
     }
+}
+
+void DummyStreamServer::rejectMalformed(QTcpSocket *socket, const QString &reason)
+{
+    ++m_protocol.malformedCommands;
+    m_protocol.lastCommandSupported = false;
+    m_protocol.lastMessage = reason;
+    m_commandBuffers.remove(socket);
+    // No invented success/error wire frame for malformed input.
+    socket->disconnectFromHost();
+}
+
+void DummyStreamServer::readControlCommands(QTcpSocket *socket)
+{
+    QByteArray &buffer = m_commandBuffers[socket];
+    buffer.append(socket->readAll());
+    // At most one partial 11-byte command can survive each read; Qt caps
+    // each socket read at 4096 bytes. No unbounded partial-input accumulation.
+    if (buffer.size() > 4106) {
+        rejectMalformed(socket, QStringLiteral("SIMULATED: command buffer limit"));
+        return;
+    }
+    while (!buffer.isEmpty()) {
+        while (!buffer.isEmpty() && (buffer[0] == ' ' || buffer[0] == '\t' ||
+               buffer[0] == '\r' || buffer[0] == '\n')) buffer.remove(0, 1);
+        if (buffer.isEmpty()) return;
+        const QByteArray prefix = buffer.left(4).toLower();
+        if (prefix.startsWith("spi")) {
+            if (buffer.size() < 11) return;
+            const QByteArray hex = buffer.mid(3, 8);
+            for (const char c : hex) {
+                if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||
+                      (c >= 'A' && c <= 'F'))) {
+                    rejectMalformed(socket, QStringLiteral("SIMULATED: SPI requires eight hexadecimal digits"));
+                    return;
+                }
+            }
+            if (m_singlePort && m_streamClients.contains(socket)) {
+                rejectMalformed(socket, QStringLiteral("SIMULATED: use a separate SPI control connection"));
+                return;
+            }
+            const quint32 word = hex.toUInt(nullptr, 16);
+            buffer.remove(0, 11);
+            applySpiWord(word);
+            // Preserve the old Dummy's 12 zero bytes for GUI transport
+            // compatibility. This is NOT a register echo or board response.
+            socket->write(QByteArray(12, '\0'));
+        } else if (prefix == "ctre") {
+            buffer.remove(0, 4);
+            if (m_singlePort) {
+                const bool firstStream = m_streamClients.isEmpty();
+                m_controlClients.remove(socket);
+                m_streamClients.insert(socket);
+                if (firstStream) resetPhases();
+            } else {
+                m_dualPortArmed = true;
+                resetPhases();
+            }
+        } else if (prefix == "stop") {
+            buffer.remove(0, 4);
+            if (m_singlePort) {
+                socket->disconnectFromHost();
+                return;
+            }
+            m_dualPortArmed = false;
+        } else if (QByteArray("spi").startsWith(prefix) ||
+                   QByteArray("ctre").startsWith(prefix) ||
+                   QByteArray("stop").startsWith(prefix)) {
+            return; // TCP fragment, not a command boundary.
+        } else {
+            rejectMalformed(socket, QStringLiteral("SIMULATED: unknown transport command"));
+            return;
+        }
+    }
+}
+
+void DummyStreamServer::applySpiWord(quint32 word)
+{
+    ++m_protocol.spiCommands;
+    m_protocol.lastSpiWord = word;
+    const unsigned opcode = word >> 26;
+    const unsigned block = (word >> 18) & 0xff;
+    const unsigned channel = (word >> 16) & 3;
+    const quint16 data = static_cast<quint16>(word & 0xffff);
+    bool supported = false;
+    if ((opcode == 0x04 || opcode == 0x06 || opcode == 0x1e) && block < 64) {
+        const unsigned index = block * 4 + channel;
+        if (opcode == 0x04) m_protocol.rec[index] = data & 0x0fff;
+        if (opcode == 0x06) m_protocol.dac[index] = data;
+        if (opcode == 0x1e) m_protocol.dacCt[index] = data;
+        supported = true;
+    } else if ((word & 0x03ffffffu) == 0) {
+        // Only the exact global words shipped in the actual GUI are known.
+        switch (opcode) {
+        case 0x00: supported = true; break;
+        case 0x07: m_protocol.analogResetAsserted = true; supported = true; break;
+        case 0x08: m_protocol.analogResetAsserted = false; supported = true; break;
+        case 0x09: m_protocol.globalDacEnabled = true; supported = true; break;
+        case 0x0d: m_protocol.globalDacEnabled = false; supported = true; break;
+        case 0x12: m_protocol.cbokLow = true; supported = true; break;
+        default: break;
+        }
+    }
+    m_protocol.lastCommandSupported = supported;
+    if (supported) ++m_protocol.supportedCommands;
+    else ++m_protocol.unsupportedCommands;
+    m_protocol.lastMessage = supported
+        ? QStringLiteral("SIMULATED: documented command stored; zero reply is compatibility-only")
+        : QStringLiteral("SIMULATED: unsupported opcode/address/payload; state unchanged");
+    emit protocolCommandProcessed(word, supported);
+}
+
+double DummyStreamServer::channelGain(int channel) const
+{
+    if (channel < 0 || channel >= kChannels) return 0.0;
+    return (m_protocol.rec[channel] & (1u << 5)) ? 60.0 : 180.0;
+}
+
+bool DummyStreamServer::channelSignalEnabled(int channel) const
+{
+    return channel >= 0 && channel < kChannels &&
+           !(m_protocol.rec[channel] & (1u << 10));
+}
+
+int DummyStreamServer::simulatedElectrode(int adcChannel, quint32 sourceFrame) const
+{
+    if (adcChannel < 0 || adcChannel >= kChannels) return -1;
+    return m_tdmSimulation ? 4 * adcChannel + static_cast<int>(sourceFrame & 3u)
+                           : adcChannel;
+}
+
+double DummyStreamServer::signalScale(int channel, quint32 sourceFrame) const
+{
+    if (!channelSignalEnabled(channel)) return 0.0;
+    const double phaseScale = m_tdmSimulation ? 1.0 + 0.25 * (sourceFrame & 3u) : 1.0;
+    return channelGain(channel) / kDummyFrontEndGain * phaseScale;
 }
 
 void DummyStreamServer::acceptDataClients()
@@ -210,6 +312,12 @@ void DummyStreamServer::acceptDataClients()
 
 void DummyStreamServer::removeClient(QTcpSocket *socket)
 {
+    if (!m_commandBuffers.value(socket).trimmed().isEmpty()) {
+        ++m_protocol.malformedCommands;
+        m_protocol.lastCommandSupported = false;
+        m_protocol.lastMessage = QStringLiteral("SIMULATED: incomplete command at disconnect");
+    }
+    m_commandBuffers.remove(socket);
     m_controlClients.remove(socket);
     m_streamClients.remove(socket);
     socket->deleteLater();
@@ -295,7 +403,8 @@ void DummyStreamServer::sendBatch()
                     m_spikeCountdown[channel] = spikeLen;
                 }
                 const int adc = qBound(
-                    0, kBaseline + static_cast<int>(value + noise(m_rng)), 4095);
+                    0, kBaseline + static_cast<int>((value + noise(m_rng)) *
+                                                       signalScale(channel, timestamp)), 4095);
                 const quint32 raw =
                     (timestamp << kTimestampShift) |
                     static_cast<quint32>(adc);
@@ -314,7 +423,8 @@ void DummyStreamServer::sendBatch()
                 const int baseline = 2048 + (channel % 4) * 200;
                 const int adc = qBound(
                     0,
-                    baseline + static_cast<int>(amplitude * m_sinState[channel]),
+                    baseline + static_cast<int>(amplitude * m_sinState[channel] *
+                                                signalScale(channel, timestamp)),
                     4095);
                 const quint32 raw =
                     (timestamp << kTimestampShift) |
@@ -360,6 +470,9 @@ int runDummyServerMode(QCoreApplication &app, const QStringList &arguments)
         if (arg.compare(QStringLiteral("--waveform=spike"), Qt::CaseInsensitive) == 0) {
             server.setWaveform(DummyWaveform::Spike);
         }
+        if (arg.compare(QStringLiteral("--tdm"), Qt::CaseInsensitive) == 0) {
+            server.setTdmSimulation(true);
+        }
     }
     QString error;
     if (!server.start(controlPort, dataPort, &error)) {
@@ -371,6 +484,9 @@ int runDummyServerMode(QCoreApplication &app, const QStringList &arguments)
                         << " data=" << dataPort
                         << " fs=" << DummyStreamServer::kSampleRate
                         << " ch0=" << DummyStreamServer::kBaseFrequencyHz
+                        << " model=SIMULATED"
+                        << " tdm=" << (server.tdmSimulation() ? "four-phase-fixture" : "off")
+                        << " spi_reply=legacy-zero-placeholder"
                         << Qt::endl;
     return app.exec();
 }

@@ -1,3 +1,4 @@
+#include "core/app_version.h"
 #include "top_status_bar.h"
 #include "core/channel_routing.h"
 #include <QAbstractAnimation>
@@ -55,7 +56,7 @@ TopStatusBar::TopStatusBar(QWidget *parent)
     layout->setContentsMargins(12, 6, 12, 6);
     layout->setSpacing(16);
 
-    m_titleLabel = new QLabel(QStringLiteral("Neural Signal Command Center V6"), this);
+    m_titleLabel = new QLabel(QString::fromLatin1(kAppDisplayName), this);
     m_titleLabel->setObjectName(QStringLiteral("title"));
     layout->addWidget(m_titleLabel);
 

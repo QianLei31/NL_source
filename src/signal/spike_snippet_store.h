@@ -3,6 +3,7 @@
 #include <QMutex>
 #include <QVector>
 #include <memory>
+#include <functional>
 
 #include "signal/spike_event.h"
 
@@ -90,6 +91,7 @@ public:
     SpikeLaneSnapshot snapshotLane(int channel) const;
     // Manual candidate labels only, scoped to retained event identity. Evicted
     // or stale-epoch selections cannot label a newer waveform in the same slot.
+    void setAnnotationCallback(std::function<void(const QVector<SpikeEvent> &)> callback);
     int setCandidateUnit(quint64 epoch, int lane, const QVector<quint64> &sequences, int unitId);
     // Exposure is the number of samples actually processed in each lane,
     // independent of playback speed, UI visibility or display pause.
@@ -118,6 +120,7 @@ private:
     bool addSnippetLocked(int channel, const float *samples, SpikeEvent event);
     void clearLocked();
     mutable QMutex m_lock;
+    std::function<void(const QVector<SpikeEvent> &)> m_annotationCallback;
     quint64 m_epoch{0};
     int m_channels = 0;
     int m_len = 0;

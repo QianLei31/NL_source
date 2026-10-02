@@ -964,6 +964,10 @@ void CommandCenterMainWindow::applyPaletteToPages(const ThemePalette &palette) {
     }
 
     QMap<QString, QString> wavePalette;
+    wavePalette.insert(QStringLiteral("appBg"), cssColor(palette.appBg));
+    wavePalette.insert(QStringLiteral("text"), cssColor(palette.textPrimary));
+    wavePalette.insert(QStringLiteral("accent"), cssColor(palette.primary));
+    wavePalette.insert(QStringLiteral("warning"), cssColor(palette.warning));
     wavePalette.insert(QStringLiteral("bg"), cssColor(palette.cardBg));
     wavePalette.insert(QStringLiteral("plotBg"), cssColor(palette.plotBg));
     wavePalette.insert(QStringLiteral("title"), cssColor(palette.textSecondary));
@@ -1136,12 +1140,14 @@ void CommandCenterMainWindow::closeEvent(QCloseEvent *event) {
         }
     }
     if (m_pageSpi) m_pageSpi->flushPendingConfig();
+    // Stop the producer first while scientific consumers are still alive to
+    // acknowledge the distributor -> detector -> archive drain barrier.
+    if (m_sessionHub) m_sessionHub->stop();
     if (m_pageMap) m_pageMap->shutdown();
     if (m_pageRt) m_pageRt->shutdown();
     if (m_pageAnalyzer) m_pageAnalyzer->shutdown();
     if (m_pageSweep) m_pageSweep->shutdown();
     if (m_pageSpike) m_pageSpike->shutdown();
-    if (m_sessionHub) m_sessionHub->stop();
     stopManagedDummy();
     event->accept();
 }

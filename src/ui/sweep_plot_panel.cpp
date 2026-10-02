@@ -34,6 +34,16 @@ namespace ccv2 {
 
 namespace {
 
+// Show source rates compactly without turning a high-precision readout into a
+// several-hundred-character fixed-decimal field. Processing never reads this
+// presentation value while a SessionHub supplies the stream.
+class SampleRateSpinBox final : public QDoubleSpinBox {
+protected:
+    QString textFromValue(double value) const override {
+        return QString::number(value, 'g', 17);
+    }
+};
+
 void setComboData(QComboBox *combo, int value)
 {
     if (!combo) return;
@@ -115,8 +125,12 @@ void SweepPlotPanel::buildUi() {
     addField(QStringLiteral("通道"), m_chEdit);
 
     m_cmdEdit = new QLineEdit(QStringLiteral("ctre"));
+    m_cmdEdit->setObjectName(QStringLiteral("sweepLegacyCommand"));
     m_cmdEdit->setPlaceholderText(QStringLiteral("如 ctre"));
-    addField(QStringLiteral("命令"), m_cmdEdit);
+    auto *commandLabel = fieldLabel(QStringLiteral("命令"));
+    commandLabel->setObjectName(QStringLiteral("sweepLegacyCommandLabel"));
+    form->addWidget(commandLabel, r, 0);
+    form->addWidget(m_cmdEdit, r++, 1);
 
     m_spanSpin = new QDoubleSpinBox;
     m_spanSpin->setRange(0.2, 30.0);
@@ -125,7 +139,8 @@ void SweepPlotPanel::buildUi() {
     m_spanSpin->setSuffix(QStringLiteral(" s"));
     addField(QStringLiteral("时间窗"), m_spanSpin);
 
-    m_fsSpin = new QSpinBox;
+    m_fsSpin = new SampleRateSpinBox;
+    m_fsSpin->setDecimals(0);
     m_fsSpin->setRange(2000, 500000);
     m_fsSpin->setValue(20000);
     m_fsSpin->setSuffix(QStringLiteral(" Hz"));
@@ -242,12 +257,13 @@ void SweepPlotPanel::buildUi() {
     sideCol->addLayout(clickRow);
 
     // Global TDM state: each ADC channel is split into its two interleaved
-    // electrodes, filtered separately at fs/2. Bound to the shared TdmContext
+    // selected electrodes of four phases, filtered separately at fs/4.
+    // Bound to the shared TdmContext
     // so it tracks pages 2/3 and replay restores.
     m_tdmCheck = new QCheckBox(QStringLiteral("TDM分组显示"));
     m_tdmCheck->setToolTip(QStringLiteral(
         "全局 TDM 状态：与实时波形/分析器页联动。开启后每个 ADC 通道\n"
-        "按帧奇偶拆成两个电极，各自以 fs/2 独立滤波与 spike 检测。"));
+        "按源时间戳的四相分拣；显示所选 0/2 或 1/3 相位，各电极以 fs/4 独立滤波与 spike 检测。"));
     m_tdmPhaseCombo = new QComboBox;
     m_tdmPhaseCombo->addItem(QStringLiteral("显示相位 0 / 2"), 0);
     m_tdmPhaseCombo->addItem(QStringLiteral("显示相位 1 / 3"), 1);
@@ -291,7 +307,9 @@ void SweepPlotPanel::buildUi() {
         applyViewParams();
         scheduleSaveConfig();
     });
-    connect(m_fsSpin, qOverload<int>(&QSpinBox::valueChanged), this, [this](int) {
+    connect(m_fsSpin, qOverload<double>(&QDoubleSpinBox::valueChanged), this, [this](double fs) {
+        if (m_hub) { syncSourceSampleRate(); return; }
+        m_standaloneSampleRate = fs;
         updateFrequencyLimits();
         applyViewParams();
         applyProcConfig();
@@ -428,8 +446,12 @@ int SweepPlotPanel::laneCount() const {
     return m_channels.size() * (m_tdmEnabled ? 2 : 1);
 }
 
+double SweepPlotPanel::sourceSampleRate() const {
+    return m_hub ? m_hub->sampleRate() : m_standaloneSampleRate;
+}
+
 double SweepPlotPanel::procSampleRate() const {
-    const double fs = m_fsSpin ? static_cast<double>(m_fsSpin->value()) : 20000.0;
+    const double fs = sourceSampleRate();
     return m_tdmEnabled ? fs / kTdmPhaseCount : fs;
 }
 
@@ -515,8 +537,9 @@ void SweepPlotPanel::updateFrequencyLimits()
 {
     if (!m_fsSpin || !m_hpSpin || !m_spikeLpSpin) return;
 
-    const int upperLimit =
-        qMax(300, static_cast<int>(std::floor(m_fsSpin->value() * 0.45)));
+    const int upperLimit = static_cast<int>(qBound(
+        300.0, std::floor(sourceSampleRate() * 0.45),
+        static_cast<double>(std::numeric_limits<int>::max() - 50)));
     const QSignalBlocker hpBlocker(m_hpSpin);
     const QSignalBlocker lpBlocker(m_spikeLpSpin);
 
@@ -560,7 +583,8 @@ void SweepPlotPanel::loadConfig()
     m_spanSpin->setValue(
         sweep.value(QStringLiteral("time_span"), QStringLiteral("4")).toDouble());
     m_fsSpin->setValue(
-        sweep.value(QStringLiteral("sampling_rate"), QStringLiteral("20000")).toInt());
+        sweep.value(QStringLiteral("sampling_rate"), QStringLiteral("20000")).toDouble());
+    m_standaloneSampleRate = m_fsSpin->value();
     m_yfsSpin->setValue(
         sweep.value(QStringLiteral("y_full_scale"), QStringLiteral("0.5")).toDouble());
     m_refreshSpin->setValue(
@@ -623,7 +647,8 @@ void SweepPlotPanel::saveConfig() const
     sweep[QStringLiteral("channels")] = m_chEdit->text().trimmed();
     sweep[QStringLiteral("command")] = m_cmdEdit->text().trimmed();
     sweep[QStringLiteral("time_span")] = QString::number(m_spanSpin->value(), 'g', 12);
-    sweep[QStringLiteral("sampling_rate")] = QString::number(m_fsSpin->value());
+    // A shared source is a temporary readout, not the legacy local preference.
+    sweep[QStringLiteral("sampling_rate")] = QString::number(m_standaloneSampleRate, 'g', 17);
     sweep[QStringLiteral("y_full_scale")] = QString::number(m_yfsSpin->value(), 'g', 12);
     sweep[QStringLiteral("refresh_hz")] = QString::number(m_refreshSpin->value());
     sweep[QStringLiteral("band")] = QString::number(m_bandCombo->currentData().toInt());
@@ -662,13 +687,7 @@ void SweepPlotPanel::startStream() {
                               lifecycleGeneration);
         return;
     }
-    if (m_hub) {
-        const QSignalBlocker blocker(m_fsSpin);
-        m_fsSpin->setValue(
-            qBound(m_fsSpin->minimum(),
-                   static_cast<int>(std::llround(m_hub->sampleRate())),
-                   m_fsSpin->maximum()));
-    }
+    syncSourceSampleRate();
     m_channels = parseChannels(m_chEdit->text());
     if (m_channels.isEmpty() || m_channels.size() > 32) {
         setStatus(QStringLiteral("状态: 请输入1-32个有效且不重复的通道"), "warn");
@@ -715,8 +734,9 @@ void SweepPlotPanel::startStream() {
         }
         m_streamState->droppedFrames = 0;
         m_streamState->maxSamples = 16384;
-        m_streamState->metricWindowFrames = qMax(
-            64, static_cast<int>(std::llround(m_fsSpin->value() * 0.1)));
+        m_streamState->metricWindowFrames = static_cast<int>(std::llround(qBound(
+            64.0, sourceSampleRate() * 0.1,
+            static_cast<double>(std::numeric_limits<int>::max()))));
         m_streamState->timelineEpoch = m_hub ? m_hub->timelineEpoch() : 0;
     }
 
@@ -974,9 +994,44 @@ void SweepPlotPanel::applyTdmState(bool enabled, bool evenFirst) {
     }
 }
 
+void SweepPlotPanel::syncSourceSampleRate() {
+    const bool rateChanged = m_fsSpin->value() != sourceSampleRate();
+    const QSignalBlocker blocker(m_fsSpin);
+    m_fsSpin->setEnabled(!m_hub);
+    if (m_hub) {
+        m_fsSpin->setDecimals(323);
+        m_fsSpin->setRange(0.0, std::numeric_limits<double>::max());
+        m_fsSpin->setValue(m_hub->sampleRate());
+        m_fsSpin->setToolTip(QStringLiteral("由全局会话源控制；实时采集的采样率请在空闲时到分析器设置"));
+    } else {
+        m_fsSpin->setDecimals(0);
+        m_fsSpin->setRange(2000.0, 500000.0);
+        m_fsSpin->setValue(m_standaloneSampleRate);
+        m_fsSpin->setToolTip(QString());
+    }
+    if (rateChanged) {
+        updateFrequencyLimits();
+        applyViewParams();
+        applyProcConfig();
+    }
+}
+
 void SweepPlotPanel::setSessionHub(SessionHub *hub) {
+    if (m_hub) {
+        disconnect(m_hub, nullptr, this, nullptr);
+        if (m_hub->tdmContext()) disconnect(m_hub->tdmContext(), nullptr, this, nullptr);
+    }
     m_hub = hub;
+    syncSourceSampleRate();
+    // The shared session owns the acquisition command. Retain the legacy
+    // serialized value without presenting an editor that has no active effect.
+    m_cmdEdit->setVisible(!hub);
+    if (auto *label = findChild<QLabel *>(QStringLiteral("sweepLegacyCommandLabel")))
+        label->setVisible(!hub);
     if (!m_hub) return;
+    connect(m_hub, &SessionHub::stateChanged, this, [this](SessionHub::State) {
+        syncSourceSampleRate();
+    });
     if (TdmContext *tdm = m_hub->tdmContext()) {
         applyTdmState(tdm->enabled(), tdm->pair02());
         connect(tdm, &TdmContext::changed, this, &SweepPlotPanel::applyTdmState);

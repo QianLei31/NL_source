@@ -230,6 +230,8 @@ RecordingPanel::RecordingPanel(QWidget *parent) : QWidget(parent)
             [emitTrigger](int) { emitTrigger(); });
     connect(m_trigThreshold, qOverload<double>(&QDoubleSpinBox::valueChanged), this,
             [emitTrigger](double) { emitTrigger(); });
+    connect(m_trigAutoStop, qOverload<double>(&QDoubleSpinBox::valueChanged), this,
+            [emitTrigger](double) { emitTrigger(); });
     connect(m_trigPolarity, qOverload<int>(&QComboBox::currentIndexChanged), this,
             [emitTrigger](int) { emitTrigger(); });
     connect(m_trigTdmSlot, qOverload<int>(&QComboBox::currentIndexChanged), this,
@@ -380,11 +382,13 @@ void RecordingPanel::loadBinForExport()
                 m_exportTdmCheck->setChecked(input.metadata.tdmEnabled);
             }
             if (m_exportTdmPhase) {
-                m_exportTdmPhase->setCurrentIndex(
-                    input.metadata.tdmEvenFirst ? 0 : 1);
+                // Export always writes all four phases. The live display's
+                // 0/2 versus 1/3 choice is not an export mode, and index 1
+                // does not exist in this informational one-item combo.
+                m_exportTdmPhase->setCurrentIndex(0);
             }
             status = input.metadata.tdmEnabled
-                         ? QStringLiteral("已加载，采样率与TDM相位取自 session.json")
+                         ? QStringLiteral("已加载，采样率与TDM模式取自 session.json（四相全部导出）")
                          : QStringLiteral("已加载，采样率取自 session.json（录制时TDM关闭）");
         }
         setExportStatus(m_exportStatusLabel, status + input.warning, input.warning.isEmpty() ? "ok" : "warn");
@@ -476,9 +480,11 @@ double RecordingPanel::triggerAutoStopSeconds() const {
 }
 
 int RecordingPanel::triggerTdmSlot() const {
-    // Only a real electrode select while the row is shown (TDM active);
-    // otherwise -1 tells the hub to evaluate every frame.
-    if (!m_trigTdmRow || !m_trigTdmRow->isVisible() || !m_trigTdmSlot) {
+    // Explicit row visibility represents TDM mode; ancestor visibility does
+    // not. The storage pane is normally hidden behind hardware controls, but
+    // that must never silently broaden a selected-electrode trigger to all
+    // source frames (including while restoring settings before first show).
+    if (!m_trigTdmRow || m_trigTdmRow->isHidden() || !m_trigTdmSlot) {
         return -1;
     }
     return m_trigTdmSlot->currentData().toInt();

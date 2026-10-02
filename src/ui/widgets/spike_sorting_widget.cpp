@@ -13,6 +13,7 @@
 #include <QShowEvent>
 #include <QSignalBlocker>
 #include <QSpinBox>
+#include <QStyle>
 #include <QVBoxLayout>
 
 #include <algorithm>
@@ -23,15 +24,11 @@ namespace ccv2 {
 namespace {
 QString featureName(SpikeFeatureAxis axis) {
     switch (axis) {
-    case SpikeFeatureAxis::PeakToPeak: return QStringLiteral("Peak-to-peak (µV)");
-    case SpikeFeatureAxis::SignedPeak: return QStringLiteral("Signed peak (µV)");
-    case SpikeFeatureAxis::Energy: return QStringLiteral("Energy (µV²·ms)");
+    case SpikeFeatureAxis::PeakToPeak: return QStringLiteral("峰峰值 (µV)");
+    case SpikeFeatureAxis::SignedPeak: return QStringLiteral("带符号峰值 (µV)");
+    case SpikeFeatureAxis::Energy: return QStringLiteral("能量 (µV²·ms)");
     }
     return {};
-}
-QColor unitColor(int unit) {
-    if (unit < 0) return QColor(143, 155, 173);
-    return QColor::fromHsv((unit * 71 + 15) % 360, 175, 235);
 }
 QString number(double value) {
     return std::isfinite(value) ? QString::number(value, 'g', 5) : QStringLiteral("n/a");
@@ -64,9 +61,10 @@ protected:
     void paintEvent(QPaintEvent *) override {
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
-        p.fillRect(rect(), QColor(20, 27, 37));
-        p.setPen(QColor(72, 86, 104));
-        p.drawRect(rect().adjusted(0, 0, -1, -1));
+        p.setBrush(m_owner->m_plotBg);
+        p.setPen(m_owner->m_border);
+        p.drawRoundedRect(rect().adjusted(0, 0, -1, -1), 6, 6);
+        p.setBrush(Qt::NoBrush);
         m_area = QRectF(64, 31, std::max(1, width() - 84), std::max(1, height() - 78));
         m_points.clear();
         const auto rows = m_owner->m_model.rowsForUnit(m_owner->unitFilter());
@@ -77,8 +75,8 @@ protected:
         case Isi: drawIsi(p); break;
         }
         if (m_dragging) {
-            p.setPen(QPen(QColor(255, 222, 128), 1, Qt::DashLine));
-            p.setBrush(QColor(255, 222, 128, 30));
+            p.setPen(QPen(m_owner->m_accent, 1.5, Qt::DashLine));
+            QColor fill = m_owner->m_accent; fill.setAlpha(30); p.setBrush(fill);
             p.drawRect(QRectF(m_start, m_end).normalized().intersected(m_area));
         }
     }
@@ -116,16 +114,21 @@ protected:
     }
 
 private:
+    QColor unitColor(int unit) const {
+        if (unit < 0) return m_owner->m_wave;
+        const bool light = m_owner->m_plotBg.lightnessF() > 0.5;
+        return QColor::fromHsv((unit * 71 + 15) % 360, light ? 200 : 160, light ? 155 : 220);
+    }
     QPointF point(double x, double y) const {
         return {m_area.left() + (x - m_x0) / (m_x1 - m_x0) * m_area.width(),
                 m_area.bottom() - (y - m_y0) / (m_y1 - m_y0) * m_area.height()};
     }
     void axes(QPainter &p, const QString &title, const QString &x, const QString &y, bool integerY = false) {
-        p.setPen(QColor(220, 229, 240));
+        p.setPen(m_owner->m_text);
         p.drawText(QRectF(10, 5, width() - 20, 22), Qt::AlignLeft | Qt::AlignVCenter, title);
-        p.setPen(QColor(137, 153, 172));
+        p.setPen(m_owner->m_axis);
         p.drawRect(m_area);
-        QFont font = p.font(); font.setPointSizeF(std::max(7.0, font.pointSizeF() - 1)); p.setFont(font);
+        QFont font = p.font(); font.setPixelSize(11); p.setFont(font);
         for (int i = 0; i <= 2; ++i) {
             const double t = i / 2.0;
             const double px = m_area.left() + m_area.width() * t;
@@ -143,7 +146,7 @@ private:
         p.restore();
     }
     void empty(QPainter &p, const QString &text) {
-        p.setPen(QColor(165, 176, 192)); p.drawText(m_area, Qt::AlignCenter | Qt::TextWordWrap, text);
+        p.setPen(m_owner->m_secondary); p.drawText(m_area, Qt::AlignCenter | Qt::TextWordWrap, text);
     }
     void drawFeatures(QPainter &p, const QVector<int> &rows) {
         m_x0 = m_y0 = std::numeric_limits<double>::infinity();
@@ -156,7 +159,7 @@ private:
             m_y0 = std::min(m_y0, y); m_y1 = std::max(m_y1, y);
         }
         padRange(m_x0, m_x1); padRange(m_y0, m_y1);
-        axes(p, QStringLiteral("Features • drag to select"), featureName(m_owner->xAxis()), featureName(m_owner->yAxis()));
+        axes(p, QStringLiteral("特征分布 · 拖动框选"), featureName(m_owner->xAxis()), featureName(m_owner->yAxis()));
         p.save(); p.setClipRect(m_area);
         for (int row : rows) {
             const auto &f = m_owner->m_model.features()[row];
@@ -165,11 +168,11 @@ private:
             const auto &e = m_owner->m_model.events()[row];
             const QPointF pos = point(x, y); m_points.append({row, pos});
             const bool selected = m_owner->m_selected.contains(e.sequence);
-            p.setPen(selected ? QPen(QColor(255, 239, 183), 1.5) : QPen(Qt::NoPen));
+            p.setPen(selected ? QPen(m_owner->m_accent, 1.5) : QPen(Qt::NoPen));
             p.setBrush(unitColor(e.unitId)); p.drawEllipse(pos, selected ? 4 : 2.7, selected ? 4 : 2.7);
         }
         p.restore();
-        if (m_points.isEmpty()) empty(p, QStringLiteral("No finite features in this retained snapshot"));
+        if (m_points.isEmpty()) empty(p, QStringLiteral("当前留存窗口暂无有效特征"));
     }
     void drawWaveforms(QPainter &p, const QVector<int> &rows) {
         const auto &qc = m_owner->m_qc;
@@ -200,10 +203,10 @@ private:
         for (int j = 0; j < qc.meanUv.size(); ++j)
             amplitude = std::max(amplitude, std::abs(qc.meanUv[j]) + qc.stddevUv[j]);
         m_y0 = -1.1 * amplitude; m_y1 = 1.1 * amplitude;
-        axes(p, QStringLiteral("Waveforms: ≤80 overlays; filter mean ±SD (n=%1)").arg(qc.templateEvents),
-             QStringLiteral("Time from threshold crossing (ms)"), QStringLiteral("Input µV"));
+        axes(p, QStringLiteral("波形与均值 ±SD · n=%1 · 最多叠加80条").arg(qc.templateEvents),
+             QStringLiteral("相对阈值时间 (ms)"), QStringLiteral("输入等效 µV"));
         p.save(); p.setClipRect(m_area);
-        p.setPen(QPen(QColor(100, 112, 127), 1, Qt::DashLine));
+        p.setPen(QPen(m_owner->m_grid, 1, Qt::DashLine));
         p.drawLine(point(0, m_y0), point(0, m_y1));
         for (int row : overlay) {
             const auto &e = m_owner->m_model.events()[row];
@@ -227,11 +230,11 @@ private:
             }
             for (int j = length - 1; j >= 0; --j)
                 band.lineTo(point((j - qc.preSamples) * qc.waveformStepMs, qc.meanUv[j] - qc.stddevUv[j]));
-            band.closeSubpath(); p.fillPath(band, QColor(235, 241, 248, 35));
-            p.setPen(QPen(QColor(247, 248, 250), 2)); p.drawPath(mean);
+            band.closeSubpath(); p.fillPath(band, QColor(m_owner->m_wave.red(), m_owner->m_wave.green(), m_owner->m_wave.blue(), 35));
+            p.setPen(QPen(m_owner->m_text, 2)); p.drawPath(mean);
         }
         p.restore();
-        if (qc.templateEvents == 0) empty(p, QStringLiteral("No compatible finite waveform template"));
+        if (qc.templateEvents == 0) empty(p, QStringLiteral("暂无可用的同类波形模板"));
     }
     void drawRaster(QPainter &p, const QVector<int> &rows) {
         m_x0 = std::numeric_limits<double>::infinity(); m_x1 = -m_x0;
@@ -245,8 +248,8 @@ private:
             m_y1 = std::max(m_y1, e.unitId + 0.5);
         }
         padRange(m_x0, m_x1);
-        axes(p, QStringLiteral("Retained source-time raster • 0 = unassigned"),
-             QStringLiteral("Source frame / source Fs (s)"), QStringLiteral("Candidate"), true);
+        axes(p, QStringLiteral("事件时序 · 0 = 未分配"),
+             QStringLiteral("源时间 (s)"), QStringLiteral("候选"), true);
         p.save(); p.setClipRect(m_area);
         for (int row : rows) {
             const auto &e = m_owner->m_model.events()[row];
@@ -255,7 +258,7 @@ private:
             p.setPen(QPen(unitColor(e.unitId), 1.5)); p.drawLine(pos + QPointF(0, -4), pos + QPointF(0, 4));
         }
         p.restore();
-        if (timed == 0) empty(p, QStringLiteral("No source timestamps available"));
+        if (timed == 0) empty(p, QStringLiteral("暂无可用的源时间戳"));
     }
     void drawIsi(QPainter &p) {
         const auto &qc = m_owner->m_qc;
@@ -267,15 +270,15 @@ private:
             maximum = std::max(maximum, ++counts[bin]);
         }
         m_x0 = 0; m_x1 = 100; m_y0 = 0; m_y1 = maximum * 1.1;
-        axes(p, QStringLiteral("Retained ISI • 2 ms bins • ≥100 ms: %1").arg(overflow),
-             QStringLiteral("Within-segment interval (ms)"), QStringLiteral("Count"), true);
+        axes(p, QStringLiteral("ISI 间隔 · 2 ms 分箱 · ≥100 ms: %1").arg(overflow),
+             QStringLiteral("连续片段内间隔 (ms)"), QStringLiteral("计数"), true);
         p.save(); p.setClipRect(m_area);
         for (int i = 0; i < bins; ++i) {
             QRectF bar(point(i * 2, counts[i]), point((i + 1) * 2, 0));
-            p.fillRect(bar.normalized().adjusted(0.5, 0, -0.5, 0), i == 0 ? QColor(235, 159, 98) : QColor(91, 180, 201));
+            p.fillRect(bar.normalized().adjusted(0.5, 0, -0.5, 0), i == 0 ? m_owner->m_warning : m_owner->m_wave);
         }
         p.restore();
-        if (qc.intervalsMs.isEmpty()) empty(p, QStringLiteral("Need ≥2 source-timed events in one continuity segment"));
+        if (qc.intervalsMs.isEmpty()) empty(p, QStringLiteral("需同一连续片段内至少2个有效事件"));
     }
 
     SpikeSortingWidget *m_owner;
@@ -290,60 +293,109 @@ private:
 SpikeSortingWidget::SpikeSortingWidget(SpikeSnippetStore *store, QWidget *parent)
     : QWidget(parent, Qt::Window), m_store(store) {
     setObjectName(QStringLiteral("spikeSortingWorkspace"));
-    setWindowTitle(QStringLiteral("候选单元 / Manual candidate-unit workspace"));
-    resize(1080, 820);
+    setWindowTitle(QStringLiteral("候选单元 · Spike 分选"));
+    setAttribute(Qt::WA_QuitOnClose, false);
+    resize(1120, 850);
+    setMinimumSize(900, 680);
     auto *root = new QVBoxLayout(this);
-    auto *notice = new QLabel(QStringLiteral(
-        "Manual candidate labels only; no automatic biological-unit isolation. "
-        "Work on the newest retained events of one lane. Labels expire when events are evicted or analysis resets; export before then."));
-    notice->setWordWrap(true); root->addWidget(notice);
+    root->setContentsMargins(12, 12, 12, 12);
+    root->setSpacing(8);
+    auto *header = new QHBoxLayout;
+    auto *title = new QLabel(QStringLiteral("候选单元"));
+    title->setObjectName(QStringLiteral("title"));
+    header->addWidget(title);
+    auto *notice = new QLabel(QStringLiteral("人工候选标签 · 仅留存窗口 · 非单神经元分离结论"));
+    notice->setProperty("role", "caption");
+    notice->setWordWrap(true);
+    notice->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    header->addWidget(notice, 1);
+    root->addLayout(header);
+
+    auto *controlPanel = new QWidget;
+    controlPanel->setProperty("role", "page-control-panel");
+    auto *controlRows = new QVBoxLayout(controlPanel);
+    controlRows->setContentsMargins(0, 0, 0, 0);
+    controlRows->setSpacing(6);
     auto *controls = new QHBoxLayout;
-    controls->addWidget(new QLabel(QStringLiteral("Lane (0-based)")));
+    controls->setSpacing(8);
+    controls->addWidget(new QLabel(QStringLiteral("通道")));
     m_laneSpin = new QSpinBox; m_laneSpin->setObjectName(QStringLiteral("candidateLane"));
+    m_laneSpin->setToolTip(QStringLiteral("通道编号从0开始；TDM时按当前相位对映射电极"));
     m_laneSpin->setRange(0, std::max(0, store ? store->channels() - 1 : 0)); controls->addWidget(m_laneSpin);
-    controls->addWidget(new QLabel(QStringLiteral("Show")));
+    controls->addWidget(new QLabel(QStringLiteral("显示")));
     m_unitFilter = new QComboBox; m_unitFilter->setObjectName(QStringLiteral("candidateFilter"));
-    m_unitFilter->addItem(QStringLiteral("All / pooled"), SpikeSortingModel::kAllUnits);
-    m_unitFilter->addItem(QStringLiteral("Unassigned"), -1);
-    for (int i = 1; i <= 32; ++i) m_unitFilter->addItem(QStringLiteral("Candidate %1").arg(i), i);
+    m_unitFilter->addItem(QStringLiteral("全部事件"), SpikeSortingModel::kAllUnits);
+    m_unitFilter->addItem(QStringLiteral("未分配"), -1);
+    for (int i = 1; i <= 32; ++i) m_unitFilter->addItem(QStringLiteral("候选 %1").arg(i), i);
     controls->addWidget(m_unitFilter);
-    m_freeze = new QCheckBox(QStringLiteral("Freeze snapshot"));
+    m_freeze = new QCheckBox(QStringLiteral("冻结当前快照"));
     m_freeze->setObjectName(QStringLiteral("candidateFreeze"));
-    m_freeze->setToolTip(QStringLiteral("Freezes only this bounded view. Acquisition/detection continue; selected events may be evicted before labeling."));
+    m_freeze->setToolTip(QStringLiteral("仅冻结此窗口；采集与分析继续。留存容量满时，选中的旧事件仍可能被覆盖。跳转或新时间线会清除旧选择并刷新快照"));
     controls->addWidget(m_freeze);
-    auto *refresh = new QPushButton(QStringLiteral("Refresh snapshot"));
+    auto *refresh = new QPushButton(QStringLiteral("刷新快照"));
+    refresh->setProperty("variant", "secondary");
     refresh->setObjectName(QStringLiteral("candidateRefresh")); controls->addWidget(refresh);
-    controls->addStretch(); root->addLayout(controls);
+    controls->addStretch(); controlRows->addLayout(controls);
     auto *featureControls = new QHBoxLayout;
-    featureControls->addWidget(new QLabel(QStringLiteral("X"))); m_xAxis = new QComboBox;
+    featureControls->setSpacing(8);
+    featureControls->addWidget(new QLabel(QStringLiteral("特征 X"))); m_xAxis = new QComboBox;
     featureControls->addWidget(m_xAxis); featureControls->addWidget(new QLabel(QStringLiteral("Y"))); m_yAxis = new QComboBox;
     for (auto axis : {SpikeFeatureAxis::PeakToPeak, SpikeFeatureAxis::SignedPeak, SpikeFeatureAxis::Energy}) {
         m_xAxis->addItem(featureName(axis), int(axis)); m_yAxis->addItem(featureName(axis), int(axis));
     }
     m_yAxis->setCurrentIndex(1); featureControls->addWidget(m_yAxis);
-    auto *selectAll = new QPushButton(QStringLiteral("Select shown")); selectAll->setObjectName(QStringLiteral("candidateSelectAll"));
-    auto *clear = new QPushButton(QStringLiteral("Clear selection"));
+    auto *selectAll = new QPushButton(QStringLiteral("选择全部可见")); selectAll->setObjectName(QStringLiteral("candidateSelectAll"));
+    auto *clear = new QPushButton(QStringLiteral("清除选择"));
+    clear->setObjectName(QStringLiteral("candidateClearSelection"));
+    selectAll->setProperty("variant", "secondary"); clear->setProperty("variant", "secondary");
     featureControls->addWidget(selectAll); featureControls->addWidget(clear); featureControls->addStretch();
-    root->addLayout(featureControls);
+    controlRows->addLayout(featureControls);
+    root->addWidget(controlPanel);
     auto *grid = new QGridLayout;
+    grid->setSpacing(8);
     for (int i = 0; i < 4; ++i) {
         auto *plot = new SpikeSortingPlot(this, static_cast<SpikeSortingPlot::Kind>(i));
         m_plots.append(plot); grid->addWidget(plot, i / 2, i % 2);
     }
     root->addLayout(grid, 1);
-    auto *labels = new QHBoxLayout;
-    m_selection = new QLabel; labels->addWidget(m_selection); labels->addStretch();
+    auto *labelPanel = new QWidget;
+    labelPanel->setProperty("role", "page-control-panel");
+    auto *labels = new QHBoxLayout(labelPanel);
+    labels->setContentsMargins(0, 0, 0, 0);
+    labels->setSpacing(8);
+    m_selection = new QLabel; m_selection->setProperty("role", "data-value"); labels->addWidget(m_selection); labels->addStretch();
     m_unitSpin = new QSpinBox; m_unitSpin->setObjectName(QStringLiteral("candidateUnit")); m_unitSpin->setRange(1, 32);
-    m_unitSpin->setPrefix(QStringLiteral("Candidate ")); labels->addWidget(m_unitSpin);
-    m_assign = new QPushButton(QStringLiteral("Label selected")); m_assign->setObjectName(QStringLiteral("candidateAssign")); labels->addWidget(m_assign);
-    m_unassign = new QPushButton(QStringLiteral("Unassign selected")); m_unassign->setObjectName(QStringLiteral("candidateUnassign")); labels->addWidget(m_unassign);
-    root->addLayout(labels);
-    m_coverage = new QLabel; m_coverage->setWordWrap(true); m_coverage->setObjectName(QStringLiteral("candidateCoverage")); root->addWidget(m_coverage);
-    m_quality = new QLabel; m_quality->setWordWrap(true); root->addWidget(m_quality);
-    m_feedback = new QLabel(QStringLiteral("Drag in the feature plot to select; Shift adds. White waveform = mean ±1 SD of the shown filter. Retained-event JSON export on the Spike page includes candidate labels."));
-    m_feedback->setWordWrap(true); m_feedback->setObjectName(QStringLiteral("candidateFeedback")); root->addWidget(m_feedback);
-    auto *caution = new QLabel(QStringLiteral("QC uses retained events only. ISIs never bridge known continuity gaps. Detector refractory dead time, missed events and retention bias these metrics; a low short-ISI count does not establish unit isolation."));
-    caution->setWordWrap(true); root->addWidget(caution);
+    m_unitSpin->setPrefix(QStringLiteral("候选 ")); labels->addWidget(m_unitSpin);
+    m_assign = new QPushButton(QStringLiteral("标记所选")); m_assign->setObjectName(QStringLiteral("candidateAssign")); m_assign->setProperty("variant", "primary"); labels->addWidget(m_assign);
+    m_unassign = new QPushButton(QStringLiteral("移除标记")); m_unassign->setObjectName(QStringLiteral("candidateUnassign")); m_unassign->setProperty("variant", "secondary"); labels->addWidget(m_unassign);
+    root->addWidget(labelPanel);
+    m_coverage = new QLabel; m_coverage->setWordWrap(true); m_coverage->setProperty("role", "caption"); m_coverage->setObjectName(QStringLiteral("candidateCoverage")); root->addWidget(m_coverage);
+    auto *qualityPanel = new QWidget;
+    qualityPanel->setProperty("role", "page-control-panel");
+    auto *qualityRow = new QHBoxLayout(qualityPanel);
+    qualityRow->setContentsMargins(0, 0, 0, 0);
+    m_qualitySummary = new QLabel; m_qualitySummary->setProperty("role", "status-line"); m_qualitySummary->setObjectName(QStringLiteral("candidateQualitySummary")); m_qualitySummary->setWordWrap(true);
+    qualityRow->addWidget(m_qualitySummary, 1);
+    auto *detailsButton = new QPushButton(QStringLiteral("质量详情 ▾"));
+    detailsButton->setObjectName(QStringLiteral("candidateQualityDetails"));
+    detailsButton->setProperty("variant", "secondary"); detailsButton->setCheckable(true);
+    qualityRow->addWidget(detailsButton);
+    root->addWidget(qualityPanel);
+    auto *details = new QWidget;
+    details->setProperty("role", "plot-area");
+    details->setObjectName(QStringLiteral("candidateQualityDetailsPanel"));
+    auto *detailLayout = new QVBoxLayout(details);
+    detailLayout->setContentsMargins(10, 8, 10, 8);
+    m_quality = new QLabel; m_quality->setWordWrap(true); m_quality->setProperty("role", "caption"); detailLayout->addWidget(m_quality);
+    auto *caution = new QLabel(QStringLiteral("仅统计留存事件；ISI不跨越已知缺口。不应期、漏检和留存筛选都会影响指标；短ISI少不能证明单神经元分离。标签会随旧事件被覆盖或分析重置而失效，请及时导出。"));
+    caution->setWordWrap(true); caution->setProperty("role", "caption"); detailLayout->addWidget(caution);
+    root->addWidget(details); details->hide();
+    connect(detailsButton, &QPushButton::toggled, this, [details, detailsButton](bool expanded) {
+        details->setVisible(expanded);
+        detailsButton->setText(expanded ? QStringLiteral("收起详情 ▴") : QStringLiteral("质量详情 ▾"));
+    });
+    m_feedback = new QLabel(QStringLiteral("拖动特征图框选，Shift追加 · 波形显示均值±SD · 标签仅随留存事件保存，请及时导出"));
+    m_feedback->setWordWrap(true); m_feedback->setProperty("role", "caption"); m_feedback->setObjectName(QStringLiteral("candidateFeedback")); root->addWidget(m_feedback);
 
     connect(m_laneSpin, &QSpinBox::valueChanged, this, &SpikeSortingWidget::setLane);
     connect(refresh, &QPushButton::clicked, this, &SpikeSortingWidget::refreshData);
@@ -391,11 +443,11 @@ void SpikeSortingWidget::refreshData() {
     if (snapshot.quality.epoch != m_snapshot.quality.epoch || snapshot.lane != m_snapshot.lane) {
         m_selected.clear();
         if (m_snapshot.lane >= 0)
-            m_feedback->setText(QStringLiteral("Source epoch or lane changed; previous selection cleared."));
+            m_feedback->setText(QStringLiteral("时间线或通道已变更，已清除旧选择"));
     }
     if (!m_model.setSnapshot(m_lane, snapshot.events, snapshot.waveforms, snapshot.snippetLength)) {
         m_selected.clear();
-        m_feedback->setText(QStringLiteral("Snapshot unavailable or incompatible; refresh after analysis is configured."));
+        m_feedback->setText(QStringLiteral("快照暂不可用；请在分析配置完成后刷新"));
     }
     QSet<quint64> retained;
     for (int row : m_model.rowsForUnit(unitFilter())) retained.insert(m_model.events()[row].sequence);
@@ -414,36 +466,52 @@ void SpikeSortingWidget::refreshIfLive() {
     m_store->snapshotAnalysis(nullptr, &quality);
     if (quality.epoch != m_snapshot.quality.epoch) {
         m_selected.clear(); refreshData();
-        m_feedback->setText(QStringLiteral("Source epoch changed: old selection discarded and snapshot refreshed."));
+        m_feedback->setText(QStringLiteral("时间线已变更，已清除旧选择并更新快照"));
     }
 }
 
 void SpikeSortingWidget::refreshSummary() {
     m_qc = m_model.unitQc(unitFilter());
-    m_selection->setText(QStringLiteral("%1 selected / %2 shown").arg(m_selected.size()).arg(m_qc.retainedEvents));
+    m_selection->setText(QStringLiteral("已选 %1 / 可见 %2").arg(m_selected.size()).arg(m_qc.retainedEvents));
     m_assign->setEnabled(!m_selected.isEmpty()); m_unassign->setEnabled(!m_selected.isEmpty());
     const int retained = int(m_model.events().size());
     const qint64 omitted = std::max<qint64>(0, m_snapshot.totalDetected - retained);
     QString identity;
     if (retained) {
         const auto &e = m_model.events().first();
-        identity = QStringLiteral(" • ADC %1 / electrode %2 / phase %3").arg(e.adcChannel).arg(e.electrode).arg(e.tdmPhase);
+        identity = e.tdmPhase < 0 ? QStringLiteral(" · ADC %1").arg(e.adcChannel)
+            : QStringLiteral(" · ADC %1 / 电极 %2 / 相位 %3").arg(e.adcChannel).arg(e.electrode).arg(e.tdmPhase);
     }
-    m_coverage->setText(QStringLiteral("Epoch %1%2 • retained %3 / %4 detected (capacity %5; %6 outside view) • processed lane samples %7 • noise RMS %8 µV")
+    m_coverage->setText(QStringLiteral("epoch %1%2 · 留存 %3 / 检出 %4（上限 %5；窗口外 %6）· 已分析 %7 样本 · 噪声 %8 µV")
         .arg(m_snapshot.quality.epoch).arg(identity).arg(retained).arg(m_snapshot.totalDetected)
         .arg(m_snapshot.capacity).arg(omitted).arg(m_snapshot.observedSamples).arg(number(m_snapshot.noiseRmsV * 1e6)));
     const auto &quality = m_snapshot.quality;
     const QString coverage = quality.incomplete()
-        ? QStringLiteral("INCOMPLETE: gaps %1, missing frames %2, queue-dropped %3, invalid %4, unverified frames %5, pending windows %6, boundary-excluded events %7%8")
+        ? QStringLiteral("覆盖详情：中断 %1，缺失 %2 帧，队列丢失 %3，无效 %4，未验证 %5，待完成窗口 %6，边界排除 %7%8")
               .arg(quality.discontinuities).arg(quality.missingSourceFrames).arg(quality.queueDroppedFrames)
               .arg(quality.invalidFrames).arg(quality.unverifiedFrames).arg(quality.pendingWindowEvents)
-              .arg(quality.boundaryExcludedEvents).arg(quality.stoppedEarly ? QStringLiteral(", stopped early") : QString())
-        : QStringLiteral("No reported analysis gaps (retained window, not full-session events)");
+              .arg(quality.boundaryExcludedEvents).arg(quality.stoppedEarly ? QStringLiteral("；停止尾部未保证完整") : QString())
+        : QStringLiteral("此分析区间未发现已知缺口；仅覆盖留存窗口，并非完整事件录制");
     const QString timing = m_qc.firstSourceSeconds >= 0
         ? QStringLiteral("%1–%2 s").arg(number(m_qc.firstSourceSeconds), number(m_qc.lastSourceSeconds)) : QStringLiteral("n/a");
-    m_quality->setText(QStringLiteral("%1\nShown-filter QC: source span %2 • ISIs %3 • <2 ms %4 • invalid waves %5 • unknown times %6 • incompatible templates %7")
+    m_quality->setText(QStringLiteral("%1\n当前筛选 QC：源时间 %2 · ISI %3 · <2 ms %4 · 无效波形 %5 · 未知时间 %6 · 不兼容模板 %7")
         .arg(coverage, timing).arg(m_qc.intervalsMs.size()).arg(m_qc.shortIntervals)
         .arg(m_qc.invalidWaveforms).arg(m_qc.unknownTimes).arg(m_qc.incompatibleTemplates));
+    QStringList alerts;
+    if (quality.missingSourceFrames || quality.queueDroppedFrames || quality.invalidFrames || quality.discontinuities)
+        alerts << QStringLiteral("存在缺口或无效帧");
+    if (quality.unverifiedFrames) alerts << QStringLiteral("来源有效性未验证");
+    if (quality.stoppedEarly) alerts << QStringLiteral("停止尾部未保证完整");
+    if (quality.boundaryExcludedEvents) alerts << QStringLiteral("已排除边界窗口");
+    if (quality.pendingWindowEvents) alerts << QStringLiteral("%1 个窗口待后续样本").arg(quality.pendingWindowEvents);
+    m_qualitySummary->setText(QStringLiteral("ISI %1 · <2 ms %2 · %3")
+        .arg(m_qc.intervalsMs.size()).arg(m_qc.shortIntervals)
+        .arg(alerts.isEmpty() ? QStringLiteral("仅统计当前留存窗口") : alerts.join(QStringLiteral(" · "))));
+    m_qualitySummary->setToolTip(m_quality->text());
+    m_qualitySummary->setProperty("state", alerts.isEmpty() ? "info" : "warn");
+    m_qualitySummary->style()->unpolish(m_qualitySummary);
+    m_qualitySummary->style()->polish(m_qualitySummary);
+
 }
 
 void SpikeSortingWidget::updatePlots() { for (auto *plot : m_plots) plot->update(); }
@@ -460,9 +528,30 @@ void SpikeSortingWidget::assignSelected(int unit) {
     const QVector<quint64> sequences(m_selected.cbegin(), m_selected.cend());
     const int applied = m_store->setCandidateUnit(m_snapshot.quality.epoch, m_lane, sequences, unit);
     refreshData();
-    m_feedback->setText(QStringLiteral("%1 of %2 selected events %3. %4 stale/evicted events skipped. Labels belong to retained events only; export before eviction/reset.")
-        .arg(applied).arg(sequences.size()).arg(unit < 0 ? QStringLiteral("unassigned") : QStringLiteral("labeled candidate %1").arg(unit))
+    m_feedback->setText(QStringLiteral("已处理 %1 / %2 个所选事件：%3；跳过 %4 个已失效事件。标签仅随留存事件保存，请及时导出")
+        .arg(applied).arg(sequences.size()).arg(unit < 0 ? QStringLiteral("移除标记") : QStringLiteral("标记候选 %1").arg(unit))
         .arg(sequences.size() - applied));
+}
+
+void SpikeSortingWidget::setWaveTheme(const QMap<QString, QString> &palette) {
+    const auto pick = [&](const char *key, QColor &color) {
+        const QColor candidate(palette.value(QLatin1String(key)));
+        if (candidate.isValid()) color = candidate;
+    };
+    pick("appBg", m_windowBg); pick("plotBg", m_plotBg);
+    pick("text", m_text); pick("title", m_secondary); pick("grid", m_grid);
+    pick("axis", m_axis); pick("wave", m_wave); pick("border", m_border);
+    pick("accent", m_accent); pick("warning", m_warning);
+    update(); updatePlots();
+}
+
+void SpikeSortingWidget::paintEvent(QPaintEvent *event) {
+    Q_UNUSED(event);
+    // QWidget's global QSS background is transparent. A real modeless window
+    // needs its own opaque app surface, otherwise light-theme text lands on
+    // an OS/default black backing instead of the application's theme.
+    QPainter painter(this);
+    painter.fillRect(rect(), m_windowBg);
 }
 
 void SpikeSortingWidget::showEvent(QShowEvent *event) {

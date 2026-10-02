@@ -374,11 +374,18 @@ SettingsPanel::SettingsPanel(QWidget *parent)
     });
 
     connect(m_applyBtn, &QPushButton::clicked, this, [this]() {
+        // Switching out of local-test mode synchronously restores the last
+        // hardware endpoint into these editors. Preserve the operator's new
+        // edits before that callback, just as the Connect action does.
+        const QString requestedHost = effectiveHost();
+        const int requestedSpiPort = effectiveSpiPort();
+        const int requestedDataPort = effectiveDataPort();
+        const QString requestedTheme = theme();
         emit localTestToggled(m_localTestCheck->isChecked(),
                               m_dummySpiPortSpin->value(),
                               m_dummyDataPortSpin->value(),
                               managedTestSource());
-        emit applied(effectiveHost(), effectiveSpiPort(), effectiveDataPort(), theme());
+        emit applied(requestedHost, requestedSpiPort, requestedDataPort, requestedTheme);
         hide();
     });
 

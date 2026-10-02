@@ -193,6 +193,13 @@ public:
         fitToChip();
     }
 
+    ~ElectrodeMapView() override {
+        // QWidget deletes the owned scene only after this class's item index
+        // and callbacks have been destroyed. Removing selected scene items
+        // emits selectionChanged; do not re-enter refreshItemStyles then.
+        if (scene()) QObject::disconnect(scene(), nullptr, this, nullptr);
+    }
+
     void setOnPairSelectionChanged(const std::function<void(const QSet<QPair<int, int>> &)> &cb) { m_pairSelectionChanged = cb; }
     void setOnElectrodeClicked(const std::function<void(const QVariantMap &)> &cb) { m_electrodeClicked = cb; }
     void setOnZoomChanged(const std::function<void(int)> &cb) { m_zoomChanged = cb; }

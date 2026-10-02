@@ -1,5 +1,6 @@
 # V7 preview validation report
 
+> Historical preview1 document. Current scope and final verification are in [preview2 report](v7_preview2_release.md).
 Date: 2026-10-02. Version: **7.0.0-preview.1**. Source baseline:
 `f4780565da036695c2521638d9802997b300553c`. The later docs-only upstream commit
 `28805257866a4604c223390faa024f4e2bdc11cb` and its recorded-data documentation are

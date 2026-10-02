@@ -1,4 +1,5 @@
 #include "service/session_hub.h"
+#include <QPointer>
 
 #include <algorithm>
 
@@ -108,6 +109,12 @@ qint64 SessionHub::addSubscriberWithFrameOrigin(
     // mutex, so the returned origin is exactly the first frame that can be
     // enqueued for this new subscriber. No long-lived dispatch lock is needed.
     return m_currentFrameIndex.load();
+}
+
+void SessionHub::detachSubscriberForDrain(const std::shared_ptr<ThreadSafeQueue<QByteArray>> &queue)
+{
+    QMutexLocker locker(&m_subMutex);
+    m_subscribers.removeAll(queue);
 }
 
 void SessionHub::removeSubscriber(
@@ -297,8 +304,7 @@ bool SessionHub::startReplay(const QString &binFile, double fallbackSampleRate)
             this,
             &SessionHub::replayBackpressureChanged);
     connect(m_replay, &ReplayController::finished, this, [this]() {
-        setState(State::ReplayReady);
-        emit replayFinished();
+        finishReplayAfterDistribution(timelineEpoch());
     });
 
     m_distributorStop.store(false);
@@ -315,6 +321,28 @@ bool SessionHub::startReplay(const QString &binFile, double fallbackSampleRate)
         emit connectionEvent(QStringLiteral("回放警告: %1").arg(m_replay->warning()));
     }
     return true;
+}
+
+void SessionHub::finishReplayAfterDistribution(quint64 epoch)
+{
+    if (!m_replay || epoch != timelineEpoch() || m_replay->isPlaying()) return;
+    // Queue emptiness alone is not a barrier: the distributor can have popped
+    // its final item before obtaining the dispatch lock. Join the draining
+    // distributor after the paused replay producer has finished instead.
+    m_distributorStop.store(true);
+    m_hubQueue->wakeAll();
+    if (m_distributor) {
+        m_distributor->wait();
+        delete m_distributor; m_distributor = nullptr;
+    }
+    emit sourceDrained(epoch, true, true);
+    if (!m_replay || epoch != timelineEpoch()) return;
+    // A later jump/play may start a new epoch; keep the transport reusable.
+    m_distributorStop.store(false);
+    m_distributor = new SessionDistributor(this,m_hubQueue,&m_distributorStop);
+    m_distributor->start();
+    setState(State::ReplayReady);
+    emit replayFinished();
 }
 
 void SessionHub::replayTogglePlay()
@@ -630,18 +658,21 @@ bool SessionHub::startRecording(const QString &baseDir,
 
     RecordingWorker *worker =
         new RecordingWorker(baseDir, sessionName, splitBytes, metadata, this);
+    const QPointer<RecordingWorker> guardedWorker(worker);
     connect(worker,
             &RecordingWorker::recordingFailed,
             this,
-            [this, worker](const QString &message) {
+            [this, guardedWorker](const QString &message) {
         bool wasRecording = false;
         {
             // A queued failure can be delivered after this worker was already
-            // detached (stopRecording) and a new session started; comparing
-            // the captured pointer (never dereferenced) under the same mutex
-            // keeps the stale event from stopping the new session.
+            // detached and a new session started. A raw pointer comparison is
+            // insufficient: a failed worker can be deleted and its address
+            // reused by the next one before the queued error is delivered.
+            // QObject lifetime identity prevents that stale error from
+            // stopping a different recording at the same allocation address.
             QMutexLocker dispatchLocker(&m_dispatchMutex);
-            if (m_recordWorker != worker) {
+            if (!guardedWorker || m_recordWorker != guardedWorker.data()) {
                 return;
             }
             wasRecording = m_recording.exchange(false);
@@ -818,6 +849,8 @@ void SessionHub::stopInternal(State finalState, const QString &reason)
         delete m_distributor;
         m_distributor = nullptr;
     }
+
+    if (hadSource) emit sourceDrained(timelineEpoch(), false, finalState != State::Error);
 
     if (m_recording.load() || m_recordWorker) {
         if (m_recordWorker) {

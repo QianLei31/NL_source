@@ -1199,3 +1199,25 @@ QLabel#fftStatsTitle {
     color: @violet;
     padding: 6px 0;
 }
+
+/* Neural retained-event views use the existing theme tokens. Scope these
+   state fixes so compact primary/secondary rules cannot make disabled actions
+   look enabled, and small warning text stays readable in the light theme. */
+QWidget#spikeSortingWorkspace QPushButton:disabled,
+QWidget#spikeRuleEditor QPushButton:disabled,
+QWidget#spikeArchiveBrowser QPushButton:disabled,
+QWidget#spikeAnalysisControls QPushButton:disabled,
+QPushButton#spikeExportLane:disabled {
+    background: @surface-sunken;
+    color: @text-disabled;
+    border-color: @card-border;
+}
+QWidget#spikeSortingWorkspace QPushButton:focus,
+QWidget#spikeSortingWorkspace QComboBox:focus,
+QWidget#spikeSortingWorkspace QSpinBox:focus {
+    border-color: @primary;
+}
+QLabel#candidateQualitySummary[state="warn"],
+QLabel#spikeAnalysisStatus[state="warn"] {
+    color: @text-primary;
+}

@@ -612,6 +612,7 @@ AnalyzerPanel::AnalyzerPanel(ConfigManager *cfgMgr,
     m_tdmPhaseCombo->addItem(QStringLiteral("显示相位 1 / 3"), 1);
     m_tdmPhaseCombo->setEnabled(false);
     m_pauseKeepCaptureCheckbox = new QCheckBox(QStringLiteral("暂停时继续采集"));
+    m_pauseKeepCaptureCheckbox->setObjectName(QStringLiteral("analyzerLegacyPauseCapture"));
     m_pauseKeepCaptureCheckbox->setChecked(m_cfg.pauseKeepCapture);
     m_statsSourceCombo = new QComboBox;
     m_statsSourceCombo->setToolTip(QStringLiteral("选择右侧 FFT 性能统计使用哪一路输出"));
@@ -1856,6 +1857,9 @@ void AnalyzerPanel::shutdown() {
 
 void AnalyzerPanel::setSessionHub(SessionHub *hub) {
     m_hub = hub;
+    // Pages do not own acquisition in shared-session mode. Keep the legacy
+    // setting for compatibility, but hide its otherwise ineffective control.
+    if (m_pauseKeepCaptureCheckbox) m_pauseKeepCaptureCheckbox->setVisible(!hub);
     if (!m_hub) return;
     connect(m_hub, &SessionHub::stateChanged, this, [this](SessionHub::State state) {
         if (!m_isRunning && (state == SessionHub::State::Idle || state == SessionHub::State::Error)) {

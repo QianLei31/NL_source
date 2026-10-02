@@ -1,14 +1,21 @@
 # NL_source
 
 This repository contains the C++/Qt6 source of Neural Signal Command Center,
-version **7.0.0-preview.1-20261002**. This integrated neural-analysis preview builds
+version **7.0.0-preview.2-20261002**. This integrated neural-analysis preview builds
 on V6.0.4; the existing executable/configuration identifiers remain compatible.
 It is a standalone CMake project; previous project directories are not required.
 V6 keeps the established acquisition and license protocol while unifying live acquisition,
 recording, BIN replay, and page distribution through one session pipeline.
 
-## V7 neural-analysis preview
+## V7 preview2: persistent neural analysis
 
+- Full event-stream sidecars with stable run/event IDs, immutable waveforms,
+  applied detector/rule revisions, append-only labels and cancellable reopening
+- Persistent waveform-box candidate rules classify future events; overlapping
+  rules and incompatible settings are explicit, never silently first-wins
+- Dedicated lossless offline analysis with backpressure, source-integrity
+  diagnostics, cancellation/failure recovery and producer/detector/writer drain
+- New tools use the original application themes, with real full-window visual QA
 - Continuous spike analysis stays active across page switches and display pause
 - Source-clock coverage/rates, timestamped retained events and explicit gap,
   unverified-source, invalid-frame and incomplete-window diagnostics
@@ -21,11 +28,24 @@ recording, BIN replay, and page distribution through one session pipeline.
 - Seeded Python spike fixtures now use the same default 60× gain as the built-in
   Dummy and can export offline BIN plus ground-truth JSONL
 
-Read [preview scope, use and limitations](docs/v7_neural_preview.md), the
-[code-grounded Open Ephys gap matrix](docs/open_ephys_feature_comparison.md), and
-[measured validation report](docs/v7_validation_report.md). The preview
-has no real-hardware validation and does not promise complete-event recording,
-automatic sorting, drift correction or all-1024-electrode TDM analysis.
+Read the [preview2 scope and verification report](docs/v7_preview2_release.md),
+[code-grounded Open Ephys gap matrix](docs/open_ephys_feature_comparison.md),
+[all-feature Dummy matrix](docs/dummy_feature_validation.md), and
+[new archive/rule Dummy workflow](docs/dummy_neural_archive_coverage.md).
+The earlier [preview1 validation report](docs/v7_validation_report.md) remains
+historical evidence. Real-time archives cover only their explicit capture
+interval; writer completion does not imply complete source coverage. This is
+candidate grouping, not validated automatic neuron isolation. PCA, drift
+correction, TTL/PSTH, bad-channel/reference masks, real-hardware validation and
+all-1024-electrode TDM analysis remain outside this preview.
+
+### Actual application, original themes
+
+![Full themed application with event archive and offline analysis](docs/screenshots/spike-panel.png)
+
+![Persistent waveform-box rules in the light theme](docs/screenshots/spike-rule-editor-light.png)
+
+![Reopened complete-window event archive](docs/screenshots/spike-archive-browser-dark.png)
 
 ## Version 6.0.4 (2026-09-29)
 
