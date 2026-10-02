@@ -140,6 +140,13 @@ set(SOURCES
     src/signal/spike_filter.cpp
     src/signal/spike_snippet_store.h
     src/signal/spike_snippet_store.cpp
+    src/signal/spike_event.h
+    src/io/spike_event_exporter.h
+    src/io/spike_event_exporter.cpp
+    src/signal/spike_sorting_model.h
+    src/signal/spike_sorting_model.cpp
+    src/ui/widgets/spike_sorting_widget.h
+    src/ui/widgets/spike_sorting_widget.cpp
     src/service/spike_detect_worker.h
     src/service/spike_detect_worker.cpp
     src/theme/theme_manager.h
@@ -518,6 +525,17 @@ if(BUILD_TESTING)
             $<TARGET_FILE:ccv2_spike_snippet_smoke>
     )
 
+    add_executable(ccv2_spike_event_smoke
+        tests/spike_event_smoke.cpp
+        src/signal/spike_filter.cpp
+        src/signal/spike_snippet_store.cpp
+        src/service/spike_detect_worker.cpp
+    )
+    target_include_directories(ccv2_spike_event_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} src)
+    target_link_libraries(ccv2_spike_event_smoke PRIVATE Qt6::Core)
+    add_test(NAME spike_event_smoke COMMAND ccv2_spike_event_smoke)
+    set_tests_properties(spike_event_smoke PROPERTIES TIMEOUT 30)
+
     add_executable(ccv2_session_hub_smoke
         tests/session_hub_smoke.cpp
         src/service/session_hub.cpp
@@ -707,5 +725,73 @@ if(BUILD_TESTING)
             $<TARGET_FILE:ccv2_review_regression> ${_case})
         set_tests_properties(review_${_case} PROPERTIES TIMEOUT 30)
     endforeach()
+
+    add_executable(ccv2_spike_event_export_smoke tests/spike_event_export_smoke.cpp
+        src/io/spike_event_exporter.cpp src/signal/spike_snippet_store.cpp)
+    target_include_directories(ccv2_spike_event_export_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} src)
+    target_link_libraries(ccv2_spike_event_export_smoke PRIVATE Qt6::Core)
+    add_test(NAME spike_event_export_smoke COMMAND ccv2_spike_event_export_smoke)
+
+    add_executable(ccv2_continuous_neural_analysis_smoke
+        tests/continuous_neural_analysis_smoke.cpp
+        src/ui/spike_panel.cpp src/ui/widgets/spike_grid_view.cpp
+        src/ui/widgets/spike_detail_window.cpp src/ui/widgets/spike_sorting_widget.cpp
+        src/signal/spike_sorting_model.cpp src/io/spike_event_exporter.cpp
+        src/config/config_manager.cpp src/service/spike_detect_worker.cpp
+        src/signal/spike_filter.cpp src/signal/spike_snippet_store.cpp
+        src/service/session_hub.cpp src/core/tdm_context.cpp src/core/channel_routing.cpp
+        src/io/recording_worker.cpp src/io/session_manifest.cpp src/io/session_recorder.cpp
+        src/network/socket_receiver2.cpp src/network/replay_controller.cpp
+        src/network/timestamp_checker.cpp)
+    target_include_directories(ccv2_continuous_neural_analysis_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} src)
+    target_link_libraries(ccv2_continuous_neural_analysis_smoke PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Concurrent)
+    add_test(NAME continuous_neural_analysis_smoke COMMAND ccv2_continuous_neural_analysis_smoke)
+    set_tests_properties(continuous_neural_analysis_smoke PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 45)
+
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/spike_sorting_model_smoke.cpp")
+        add_executable(ccv2_spike_sorting_model_smoke tests/spike_sorting_model_smoke.cpp
+            src/signal/spike_sorting_model.cpp src/signal/spike_snippet_store.cpp)
+        target_include_directories(ccv2_spike_sorting_model_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} src)
+        target_link_libraries(ccv2_spike_sorting_model_smoke PRIVATE Qt6::Core)
+        add_test(NAME spike_sorting_model_smoke COMMAND ccv2_spike_sorting_model_smoke)
+    endif()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/spike_sorting_widget_smoke.cpp")
+        add_executable(ccv2_spike_sorting_widget_smoke tests/spike_sorting_widget_smoke.cpp
+            src/signal/spike_sorting_model.cpp src/signal/spike_snippet_store.cpp
+            src/ui/widgets/spike_sorting_widget.cpp)
+        target_include_directories(ccv2_spike_sorting_widget_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} src)
+        target_link_libraries(ccv2_spike_sorting_widget_smoke PRIVATE Qt6::Core Qt6::Widgets)
+        add_test(NAME spike_sorting_widget_smoke COMMAND ccv2_spike_sorting_widget_smoke)
+        set_tests_properties(spike_sorting_widget_smoke PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+    endif()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/recording_validity_smoke.cpp")
+        add_executable(ccv2_recording_validity_smoke tests/recording_validity_smoke.cpp
+            src/io/session_manifest.cpp src/io/session_recorder.cpp src/io/recording_worker.cpp
+            src/network/replay_controller.cpp)
+        target_include_directories(ccv2_recording_validity_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} src)
+        target_link_libraries(ccv2_recording_validity_smoke PRIVATE Qt6::Core Qt6::Concurrent)
+        add_test(NAME recording_validity_smoke COMMAND ccv2_recording_validity_smoke)
+    endif()
+    find_package(Python3 QUIET COMPONENTS Interpreter)
+    if(Python3_Interpreter_FOUND)
+        add_test(NAME dummy_python_smoke COMMAND ${Python3_EXECUTABLE}
+            -m unittest discover -s ${CMAKE_CURRENT_SOURCE_DIR}/tests -p test_dummy_spike_server.py -v)
+    endif()
+
+    add_executable(ccv2_masked_source_timeline_smoke tests/masked_source_timeline_smoke.cpp
+        src/service/session_hub.cpp src/core/tdm_context.cpp
+        src/io/session_manifest.cpp src/io/session_recorder.cpp src/io/recording_worker.cpp
+        src/network/replay_controller.cpp src/network/socket_receiver2.cpp src/network/timestamp_checker.cpp)
+    target_include_directories(ccv2_masked_source_timeline_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} src)
+    target_link_libraries(ccv2_masked_source_timeline_smoke PRIVATE Qt6::Core Qt6::Network Qt6::Concurrent)
+    add_test(NAME masked_source_timeline_smoke COMMAND ccv2_masked_source_timeline_smoke)
+    set_tests_properties(masked_source_timeline_smoke PROPERTIES TIMEOUT 30)
+
+    add_executable(ccv2_theme_token_smoke tests/theme_token_smoke.cpp
+        src/theme/theme_manager.cpp src/ui/theme/theme.qrc)
+    target_include_directories(ccv2_theme_token_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} src)
+    target_link_libraries(ccv2_theme_token_smoke PRIVATE Qt6::Widgets)
+    add_test(NAME theme_token_smoke COMMAND ccv2_theme_token_smoke)
+    set_tests_properties(theme_token_smoke PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 endif()

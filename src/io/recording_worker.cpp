@@ -92,6 +92,11 @@ void RecordingWorker::setIntegrity(const SessionIntegrity &integrity, qint64 ing
     m_complete = m_complete && integrity.clean() && ingressDroppedFrames == 0;
 }
 
+void RecordingWorker::setAnalysisMetadata(const QJsonObject &metadata) {
+    QMutexLocker locker(&m_stateMutex);
+    m_metadata.neuralAnalysis = metadata;
+}
+
 bool RecordingWorker::integrityClean() const {
     QMutexLocker locker(&m_stateMutex);
     return m_integrity.clean() && m_ingressDroppedFrames == 0;
@@ -123,8 +128,13 @@ void RecordingWorker::failOnce(const QString &message, qint64 droppedBytes)
 void RecordingWorker::run()
 {
     SessionRecorder recorder;
+    SessionMetadata initialMetadata;
+    {
+        QMutexLocker locker(&m_stateMutex);
+        initialMetadata = m_metadata;
+    }
     const QString path =
-        recorder.start(m_baseDir, m_sessionName, m_splitBytes, m_metadata);
+        recorder.start(m_baseDir, m_sessionName, m_splitBytes, initialMetadata);
     if (!path.isEmpty()) {
         m_accepting.store(true);
     }
@@ -150,7 +160,7 @@ void RecordingWorker::run()
                 break;
             }
             firstChunk = false;
-            if (!recorder.write(chunk)) {
+            if (!recorder.write(chunk, info)) {
                 failOnce(QStringLiteral("ADC 原始流写入失败"));
                 break;
             }
@@ -171,6 +181,7 @@ void RecordingWorker::run()
         reason = m_stopReason;
         ingressDropped = m_ingressDroppedFrames;
         integrity = m_integrity;
+        recorder.setAnalysisMetadata(m_metadata.neuralAnalysis);
     }
     if (!recorder.stop(complete,
                        reason,

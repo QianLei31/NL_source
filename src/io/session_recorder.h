@@ -6,6 +6,7 @@
 #include <QVector>
 
 #include "io/session_manifest.h"
+#include "core/stream_block_info.h"
 
 namespace ccv2 {
 
@@ -15,7 +16,8 @@ public:
                   const QString &folderName,
                   qint64 maxBytesPerFile,
                   const SessionMetadata &metadata);
-    bool write(const QByteArray &rawBytes);
+    bool write(const QByteArray &rawBytes, const StreamBlockInfo &info = {});
+    void setAnalysisMetadata(const QJsonObject &metadata);
     bool setFrameOrigin(qint64 origin);
     bool stop(bool complete = true,
               const QString &reason = QStringLiteral("user_stop"),
@@ -47,6 +49,9 @@ private:
     int m_partIndex = 0;
     SessionMetadata m_metadata;
     QVector<SessionPartInfo> m_parts;
+    bool m_frameValidityKnown{true};
+    bool m_integrityUnknown{false};
+    QVector<SessionFrameRange> m_invalidFrameRanges;
 };
 
 }  // namespace ccv2

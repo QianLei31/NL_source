@@ -750,7 +750,7 @@ QPushButton#transportPlay {
     padding: 0;
 }
 QPushButton#transportPlay:hover { background: @primary-hover; }
-QPushButton#transportPlay:pressed { background: @primary-active; }
+QPushButton#transportPlay:pressed { background: @primary-press; }
 QPushButton#transportPlay:disabled { background: @card-border; }
 
 /* Segmented mode switch (实时 | 回放) */

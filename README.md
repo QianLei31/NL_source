@@ -1,10 +1,31 @@
 # NL_source
 
-This repository contains the V6 C++/Qt6 source of Neural Signal Command Center,
-version **6.0.4-20260929**. It is a standalone CMake project; previous V2-V5
-project directories are not required.
+This repository contains the C++/Qt6 source of Neural Signal Command Center,
+version **7.0.0-preview.1-20261002**. This integrated neural-analysis preview builds
+on V6.0.4; the existing executable/configuration identifiers remain compatible.
+It is a standalone CMake project; previous project directories are not required.
 V6 keeps the established acquisition and license protocol while unifying live acquisition,
 recording, BIN replay, and page distribution through one session pipeline.
+
+## V7 neural-analysis preview
+
+- Continuous spike analysis stays active across page switches and display pause
+- Source-clock coverage/rates, timestamped retained events and explicit gap,
+  unverified-source, invalid-frame and incomplete-window diagnostics
+- Per-electrode feature plots, waveform/raster/ISI review and manual candidate
+  grouping; this is not validated automatic single-neuron isolation
+- Atomic selected-lane JSON export with event identity, input-referred waveforms,
+  candidate labels, gain/reference/filter provenance and retention limits
+- Backward-compatible raw recording with versioned invalid-frame intervals;
+  replay excludes known synthetic/corrupt samples from neural detection
+- Seeded Python spike fixtures now use the same default 60× gain as the built-in
+  Dummy and can export offline BIN plus ground-truth JSONL
+
+Read [preview scope, use and limitations](docs/v7_neural_preview.md), the
+[code-grounded Open Ephys gap matrix](docs/open_ephys_feature_comparison.md), and
+[measured validation report](docs/v7_validation_report.md). The preview
+has no real-hardware validation and does not promise complete-event recording,
+automatic sorting, drift correction or all-1024-electrode TDM analysis.
 
 ## Version 6.0.4 (2026-09-29)
 
@@ -103,7 +124,7 @@ to the Windows executable when `windeployqt` is available.
 .\build\NL_CommandCenter_v6_qt.exe
 ```
 
-The standalone repository was built from scratch on 2026-10-01 with Qt 6.5.3
+The V6.0.4 baseline repository was built from scratch on 2026-10-01 with Qt 6.5.3
 and MinGW 11.2; all **40/40 tests passed**. Tests use temporary files and
 loopback servers, not real FPGA hardware.
 

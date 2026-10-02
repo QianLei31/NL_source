@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include <QDateTime>
+#include <QJsonArray>
 #include <QThread>
 #include <QTimer>
 #include <QtEndian>
@@ -275,6 +276,9 @@ bool SessionHub::startReplay(const QString &binFile, double fallbackSampleRate)
     if (m_replay->tdmKnown()) {
         m_tdmContext->setState(m_replay->tdmEnabled(), m_replay->tdmEvenFirst());
     }
+    QJsonObject replayAnalysis = m_replay->metadata().neuralAnalysis;
+    replayAnalysis["source_provenance"] = m_replay->sourceProvenance();
+    emit replayAnalysisMetadataAvailable(replayAnalysis);
     connect(m_replay,
             &ReplayController::positionChanged,
             this,
@@ -477,17 +481,35 @@ void SessionHub::onChunkLocked(const QByteArray &chunk, qint64 droppedBytesBefor
     if (frames <= 0 || chunk.size() % kFrameBytes != 0) return;
     StreamBlockInfo info = sourceInfo;
     if (info.valid() && info.frameIndices.size() != frames) return;
+    if (m_sourceType == QStringLiteral("live") && !info.integrityUnknown && info.frameValid.isEmpty()) {
+        info.frameValid.fill(true, static_cast<qsizetype>(frames));
+        for (qint64 f = 0; f < frames; ++f) {
+            const char *frame = chunk.constData() + f * kFrameBytes;
+            const quint32 ts = qFromLittleEndian<quint32>(frame) >> kTimestampShift;
+            for (int ch = 1; ch < kChannelsTotal; ++ch) {
+                if ((qFromLittleEndian<quint32>(frame + ch * kBytesPerPoint) >> kTimestampShift) != ts) {
+                    info.frameValid[static_cast<qsizetype>(f)] = false;
+                    break;
+                }
+            }
+        }
+    }
     if (!info.valid()) {
         info.epoch = m_timelineEpoch.load();
         m_sourceTimeline.skipFrames(droppedBytesBefore / kFrameBytes);
         info.frameIndices.reserve(static_cast<qsizetype>(frames));
         for (qint64 f = 0; f < frames; ++f) {
             const quint32 ts = qFromLittleEndian<quint32>(chunk.constData() + f * kFrameBytes) >> kTimestampShift;
-            info.frameIndices.push_back(m_sourceTimeline.advance(ts));
+            if (!info.frameValid.isEmpty() && !info.frameValid[static_cast<qsizetype>(f)]) {
+                info.frameIndices.push_back(m_sourceTimeline.nextIndex());
+                m_sourceTimeline.skipFrames(1);
+            } else {
+                info.frameIndices.push_back(m_sourceTimeline.advance(ts));
+            }
         }
     }
     const auto before = m_integrityAnalyzer.stats();
-    m_integrityAnalyzer.process(chunk);
+    if (!info.integrityUnknown) m_integrityAnalyzer.process(chunk);
     const auto after = m_integrityAnalyzer.stats();
     m_integrity.upstreamMissingFrames += qMax<qint64>(0,
         after.estimatedMissingFrames - before.estimatedMissingFrames -
@@ -516,6 +538,7 @@ void SessionHub::onChunkLocked(const QByteArray &chunk, qint64 droppedBytesBefor
         if (droppedFrames > 0) {
             StreamBlockInfo paddingInfo;
             paddingInfo.epoch = info.epoch;
+            paddingInfo.frameValid.fill(false, static_cast<qsizetype>(droppedFrames));
             const qint64 firstMissing = qMax<qint64>(0, info.firstFrame() - droppedFrames);
             paddingInfo.frameIndices.reserve(static_cast<qsizetype>(droppedFrames));
             for (qint64 f = 0; f < droppedFrames; ++f) paddingInfo.frameIndices.push_back(firstMissing + f);
@@ -543,6 +566,42 @@ void SessionHub::onChunkLocked(const QByteArray &chunk, qint64 droppedBytesBefor
     m_currentFrameIndex.store(info.nextFrame());
 }
 
+void SessionHub::setReferenceMode(int mode) {
+    mode = qBound(0, mode, 2);
+    if (m_referenceMode.exchange(mode) == mode) return;
+    QJsonObject metadata = analysisMetadata();
+    if (!metadata.isEmpty()) {
+        metadata["reference_mode"] = mode;
+        setAnalysisMetadata(metadata);
+    }
+    emit referenceModeChanged(mode);
+}
+
+QJsonObject SessionHub::analysisMetadata() const {
+    QMutexLocker locker(&m_dispatchMutex);
+    return m_analysisMetadata;
+}
+
+void SessionHub::setAnalysisMetadata(const QJsonObject &metadata) {
+    QMutexLocker locker(&m_dispatchMutex);
+    if (m_analysisMetadata == metadata) return;
+    m_analysisMetadata = metadata;
+    if (m_recording.load() && m_recordWorker) {
+        QJsonArray changes = m_recordingAnalysisMetadata.value("configuration_changes").toArray();
+        if (changes.size() < 256) {
+            QJsonObject change;
+            change["requested_source_frame"] = QString::number(m_currentFrameIndex.load());
+            change["configuration"] = metadata;
+            changes.append(change);
+            m_recordingAnalysisMetadata["configuration_changes"] = changes;
+        } else {
+            m_recordingAnalysisMetadata["history_truncated"] = true;
+        }
+        m_recordingAnalysisMetadata["configuration_changed"] = true;
+        m_recordWorker->setAnalysisMetadata(m_recordingAnalysisMetadata);
+    }
+}
+
 bool SessionHub::startRecording(const QString &baseDir,
                                 const QString &sessionName,
                                 qint64 splitBytes)
@@ -557,6 +616,12 @@ bool SessionHub::startRecording(const QString &baseDir,
     metadata.dataPort = m_dataPort;
     metadata.command = m_command;
     metadata.sampleRate = sampleRate();
+    m_recordingAnalysisMetadata = QJsonObject{
+        {"schema_version", 1}, {"initial_configuration", analysisMetadata()},
+        {"configuration_changes", QJsonArray{}}, {"configuration_changed", false},
+        {"history_truncated", false},
+        {"change_time_semantics", "requested_source_frame_not_atomic_detector_application"}};
+    metadata.neuralAnalysis = m_recordingAnalysisMetadata;
     metadata.tdmKnown = true;
     metadata.tdmEnabled = m_tdmContext->enabled();
     metadata.tdmEvenFirst = m_tdmContext->pair02();

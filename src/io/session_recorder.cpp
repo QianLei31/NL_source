@@ -56,6 +56,9 @@ QString SessionRecorder::start(const QString &baseDir,
     m_currentBytes = 0;
     m_totalBytes = 0;
     m_parts.clear();
+    m_invalidFrameRanges.clear();
+    m_frameValidityKnown = true;
+    m_integrityUnknown = false;
     m_metadata = metadata;
     if (m_metadata.createdAt.isEmpty()) {
         m_metadata.createdAt = QDateTime::currentDateTime().toString(Qt::ISODate);
@@ -110,13 +113,27 @@ bool SessionRecorder::openPart() {
     return true;
 }
 
-bool SessionRecorder::write(const QByteArray &rawBytes) {
+bool SessionRecorder::write(const QByteArray &rawBytes, const StreamBlockInfo &info) {
     QMutexLocker locker(&m_mutex);
     if (!m_file.isOpen() || rawBytes.isEmpty() ||
-        rawBytes.size() % kFrameBytes != 0) {
+        rawBytes.size() % kFrameBytes != 0 ||
+        (!info.frameValid.isEmpty() && info.frameValid.size() != rawBytes.size() / kFrameBytes)) {
         return false;
     }
 
+    // Keep metadata bounded. Refuse a block before writing it if loss toggles
+    // would exceed the representable range budget; never silently drop a mask.
+    qsizetype rangeCount = m_invalidFrameRanges.size();
+    bool invalidBefore = !m_invalidFrameRanges.isEmpty() &&
+        m_invalidFrameRanges.last().startFrame + m_invalidFrameRanges.last().frameCount ==
+            m_totalBytes / kFrameBytes;
+    for (const bool valid : info.frameValid) {
+        if (!valid && !invalidBefore && ++rangeCount > SessionManifest::kMaxValidityRanges)
+            return false;
+        invalidBefore = !valid;
+    }
+    m_frameValidityKnown = m_frameValidityKnown && !info.frameValid.isEmpty() && !info.integrityUnknown;
+    m_integrityUnknown = m_integrityUnknown || info.integrityUnknown;
     qint64 offset = 0;
     while (offset < rawBytes.size()) {
         if (m_maxBytesPerFile > 0 && m_currentBytes >= m_maxBytesPerFile) {
@@ -147,6 +164,19 @@ bool SessionRecorder::write(const QByteArray &rawBytes) {
         if (written != bytesToWrite) {
             return false;
         }
+        const qint64 firstRecordedFrame = m_totalBytes / kFrameBytes;
+        const qint64 firstInputFrame = offset / kFrameBytes;
+        if (!info.frameValid.isEmpty()) {
+            for (qint64 f = 0; f < written / kFrameBytes; ++f) {
+                if (info.frameValid.at(firstInputFrame + f)) continue;
+                const qint64 frame = firstRecordedFrame + f;
+                if (!m_invalidFrameRanges.isEmpty() &&
+                    m_invalidFrameRanges.last().startFrame + m_invalidFrameRanges.last().frameCount == frame)
+                    ++m_invalidFrameRanges.last().frameCount;
+                else
+                    m_invalidFrameRanges.push_back({frame, 1});
+            }
+        }
         offset += written;
         m_currentBytes += written;
         m_totalBytes += written;
@@ -155,6 +185,11 @@ bool SessionRecorder::write(const QByteArray &rawBytes) {
         part.frames += written / kFrameBytes;
     }
     return true;
+}
+
+void SessionRecorder::setAnalysisMetadata(const QJsonObject &metadata) {
+    QMutexLocker locker(&m_mutex);
+    m_metadata.neuralAnalysis = metadata;
 }
 
 bool SessionRecorder::setFrameOrigin(qint64 origin) {
@@ -178,6 +213,9 @@ bool SessionRecorder::writeManifest(bool active,
     manifest.ingressDroppedFrames = ingressDroppedFrames;
     manifest.recordingDroppedFrames = recordingDroppedFrames;
     manifest.integrity = integrity;
+    manifest.frameValidityKnown = m_frameValidityKnown;
+    manifest.integrityUnknown = m_integrityUnknown;
+    manifest.invalidFrameRanges = m_invalidFrameRanges;
     manifest.active = active;
     manifest.complete = complete;
     manifest.stopReason = reason;

@@ -1,0 +1,3418 @@
+{
+  "provenance": {
+    "title": "Simulated dataset",
+    "citation": "Quiroga, Rodrigo Quian (2020). Simulated dataset. University of Leicester. Dataset. https://doi.org/10.25392/leicester.data.11897595.v1",
+    "author": "Rodrigo Quian Quiroga",
+    "landing_url": "https://figshare.le.ac.uk/articles/dataset/Simulated_dataset/11897595",
+    "api_url": "https://api.figshare.com/v2/articles/11897595",
+    "download_url": "https://ndownloader.figshare.com/files/21819066",
+    "license": {
+      "value": 1,
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "download_md5_published": "52aafe7f04ec4d65ca383536970310cc",
+    "download_md5_actual": "52aafe7f04ec4d65ca383536970310cc",
+    "download_sha256": "de64fbf16d03eb4c0d3d1238dab16f91fe0c9dfb616a2fb4751617031bfe39d8",
+    "validation_run_utc": "2026-10-02T03:58:10.844997+00:00",
+    "retrieved_utc": "2026-10-02",
+    "dataset_kind": "Published standard synthetic ground-truth benchmark, not real acquisition data",
+    "voltage_units": "Not declared in MAT metadata; source data treated as arbitrary normalized amplitude units",
+    "harness_scale": 0.001,
+    "harness_scale_description": "Conventional 0.001 V per source amplitude unit; not a physical calibration. RMS thresholding should be scale invariant, checked separately.",
+    "sample_rate_hz": 24000.0,
+    "sample_rate_evidence": "samplingInterval=0.041666666666666664 (interpreted as ms) in every MAT; independently corroborated by par.sr=24000 in archive times_C_Difficult1_noise015.mat",
+    "time_index_conversion": "Original MAT spike_times retained, interpreted as MATLAB one-based samples and converted to zero-based by subtracting 1. Original indices also exported. No fitted temporal shift.",
+    "event_matching": "Time-ordered one-to-one maximum-cardinality matching within symmetric tolerance; each truth/detection counts at most once. No class matching or sorting score.",
+    "primary_tolerance_ms": 2.0,
+    "sensitivity_tolerances_ms": [
+      0.5,
+      1.0
+    ],
+    "analysis_window_seconds": [
+      0.252,
+      59.998
+    ],
+    "warmup_exclusion": "First 250 ms RMS warmup plus 2 ms boundary guard; final 2 ms boundary guard",
+    "parameters": "SpikeProcConfig defaults except sampleRate=24000. Separate positive polarity mode flips negativePolarity=false; no other changes. notch50Hz, band250\u20136000Hz, order2, 4xRMS, refractory1ms.",
+    "positive_mode_rationale": "Source archive example processing metadata par.detection=pos; positive mode is a separate configuration test, not a default-performance claim.",
+    "repo_commit": "f4780565da036695c2521638d9802997b300553c",
+    "detector_source_sha256": {
+      "src/signal/spike_filter.cpp": "61d1e9baf95a4663e9d6849452b504233ce2ed3814b427c749b64dc432e50d5b",
+      "src/signal/spike_filter.h": "cd27d2180834f84bb8af6bc60247d7c0f66ee190ef3b1f3bd41f6228a6e4221e"
+    },
+    "limitations": [
+      "Single-channel synthetic data only; no simultaneous multichannel, electrode drift, hardware, ADC scaling, TCP framing, dropped packet, queue latency, or calibrated amplitude validation.",
+      "Measures event detection, not supervised/unsupervised sorting or manual class separation.",
+      "Matching is against original stored markers; causal filtering, chosen polarity, threshold crossings and waveform alignment cause nonzero timing offsets. A 2 ms tolerance is permissive and close overlaps can be temporally ambiguous.",
+      "Per-unit recall breakdown is diagnostic attribution from time-only matching, not unit assignment accuracy."
+    ],
+    "files": [
+      {
+        "name": "C_Easy1_noise005",
+        "zip_member": "Simulator/C_Easy1_noise005.mat",
+        "member_sha256": "b48ae0f728062bdf6931e7f6370d1268ac553d991cb139fbc9e83e71bfc84fae",
+        "trace_sha256": "085c8ae740c7e131ebf1eab35c50615fbb5b481d3abf763eaee4633188a82bec",
+        "samples": 1440000,
+        "duration_seconds": 60.0,
+        "channels": 1,
+        "units": {
+          "1": 1165,
+          "2": 1157,
+          "3": 1192
+        },
+        "truth_events_total": 3514,
+        "source_data_min_max": [
+          -1.9127274722727203,
+          2.0078503088309603
+        ]
+      },
+      {
+        "name": "C_Easy1_noise01",
+        "zip_member": "Simulator/C_Easy1_noise01.mat",
+        "member_sha256": "0d9195030d6081b9d9f737c1ab259348231b0f48dfca9e9a9342e644a2edb5f4",
+        "trace_sha256": "3ce38adc02b30d94c32d6663a3d77f1f856c7e6c04dc71052fa10be623f926e4",
+        "samples": 1440000,
+        "duration_seconds": 60.0,
+        "channels": 1,
+        "units": {
+          "1": 1151,
+          "2": 1134,
+          "3": 1237
+        },
+        "truth_events_total": 3522,
+        "source_data_min_max": [
+          -1.893337176535639,
+          2.0036787369788405
+        ]
+      },
+      {
+        "name": "C_Easy1_noise015",
+        "zip_member": "Simulator/C_Easy1_noise015.mat",
+        "member_sha256": "678757ea5cc546bffd227731d0f7985d397006e44443ebe6dd315a693ce590c5",
+        "trace_sha256": "7bba97dee07884b298bff7a90d8ab27981730ea3e1df6cdebf42adc3b0a14e4e",
+        "samples": 1440000,
+        "duration_seconds": 60.0,
+        "channels": 1,
+        "units": {
+          "1": 1132,
+          "2": 1188,
+          "3": 1157
+        },
+        "truth_events_total": 3477,
+        "source_data_min_max": [
+          -2.0056118372552563,
+          1.8609844414462609
+        ]
+      },
+      {
+        "name": "C_Easy1_noise02",
+        "zip_member": "Simulator/C_Easy1_noise02.mat",
+        "member_sha256": "05698cd08ed7464236877d19f534b6906fd5f10d1a6f633d444f0504cf05d371",
+        "trace_sha256": "708493f9fa884e4426ba285177a9880c0f0028374eafdd0cd543af29fcbffc2a",
+        "samples": 1440000,
+        "duration_seconds": 60.0,
+        "channels": 1,
+        "units": {
+          "1": 1198,
+          "2": 1128,
+          "3": 1148
+        },
+        "truth_events_total": 3474,
+        "source_data_min_max": [
+          -2.2214596194881033,
+          2.4351876063851567
+        ]
+      },
+      {
+        "name": "C_Easy2_noise005",
+        "zip_member": "Simulator/C_Easy2_noise005.mat",
+        "member_sha256": "0eeaaf169c2e7ebbe4468b0732411c9b233c64b3d90da4e24b13623ee762e4e9",
+        "trace_sha256": "316f00cd47511a59fdc1f4026f90c350caf590f08a71b31c9185ebf18e4923e9",
+        "samples": 1440000,
+        "duration_seconds": 60.0,
+        "channels": 1,
+        "units": {
+          "1": 1130,
+          "2": 1113,
+          "3": 1167
+        },
+        "truth_events_total": 3410,
+        "source_data_min_max": [
+          -0.867417542678538,
+          2.0114342520476214
+        ]
+      },
+      {
+        "name": "C_Easy2_noise01",
+        "zip_member": "Simulator/C_Easy2_noise01.mat",
+        "member_sha256": "128562db1998b94800e20cfd4c7dceca8b96dcc9210bb484918f6d92ead69edf",
+        "trace_sha256": "9b91eb359690c152990a4297a9918f99bc709a59e05257af2f8ad2bdaaa69824",
+        "samples": 1440000,
+        "duration_seconds": 60.0,
+        "channels": 1,
+        "units": {
+          "1": 1160,
+          "2": 1146,
+          "3": 1214
+        },
+        "truth_events_total": 3520,
+        "source_data_min_max": [
+          -0.9393642110402355,
+          2.123952990183457
+        ]
+      },
+      {
+        "name": "C_Easy2_noise015",
+        "zip_member": "Simulator/C_Easy2_noise015.mat",
+        "member_sha256": "da1cdcd23e8162f9592bfe181ca3bd40a6d54d643e6cb103b7e8fd797e295d1a",
+        "trace_sha256": "87015ceff2d591909d32c0d00ae5b1640e5e24cb6c98eb7956f733d6af87e927",
+        "samples": 1440000,
+        "duration_seconds": 60.0,
+        "channels": 1,
+        "units": {
+          "1": 1181,
+          "2": 1098,
+          "3": 1132
+        },
+        "truth_events_total": 3411,
+        "source_data_min_max": [
+          -1.0776590724171546,
+          2.359125643534638
+        ]
+      },
+      {
+        "name": "C_Easy2_noise02",
+        "zip_member": "Simulator/C_Easy2_noise02.mat",
+        "member_sha256": "a4eb76153a0dde1b9b393146d8edef54dcecd48c63136608b41c8e692c0790b2",
+        "trace_sha256": "5d4416b79b6ef742b52f0a617ab94d6e49b38e91023c2292b5b7923ca23774af",
+        "samples": 1440000,
+        "duration_seconds": 60.0,
+        "channels": 1,
+        "units": {
+          "1": 1186,
+          "2": 1188,
+          "3": 1152
+        },
+        "truth_events_total": 3526,
+        "source_data_min_max": [
+          -1.1908507159032689,
+          2.711189149161
+        ]
+      },
+      {
+        "name": "C_Difficult1_noise005",
+        "zip_member": "Simulator/C_Difficult1_noise005.mat",
+        "member_sha256": "9ebd538578578a1d505afa1b3c2b95a55f1706c8432abcd04b6d7267c68312c6",
+        "trace_sha256": "6b3e8bdb36b7c077a16632486f46e782e8e0a9976761650764db6ebd5ae45f7d",
+        "samples": 1440000,
+        "duration_seconds": 60.0,
+        "channels": 1,
+        "units": {
+          "1": 1115,
+          "2": 1113,
+          "3": 1155
+        },
+        "truth_events_total": 3383,
+        "source_data_min_max": [
+          -1.2332992910778962,
+          2.0811932770089436
+        ]
+      },
+      {
+        "name": "C_Difficult1_noise01",
+        "zip_member": "Simulator/C_Difficult1_noise01.mat",
+        "member_sha256": "5ff296b5fc0f53270e25b3e07355c50339c0e697fc4fbf7c1f32d0cbdbb6a017",
+        "trace_sha256": "2b476d7bd34e0dafaae89f1139abcdae771963abc5ae9b6ff5ee25b11c5ca825",
+        "samples": 1440000,
+        "duration_seconds": 60.0,
+        "channels": 1,
+        "units": {
+          "1": 1164,
+          "2": 1155,
+          "3": 1129
+        },
+        "truth_events_total": 3448,
+        "source_data_min_max": [
+          -1.3060219880266013,
+          2.0733440465919744
+        ]
+      },
+      {
+        "name": "C_Difficult1_noise015",
+        "zip_member": "Simulator/C_Difficult1_noise015.mat",
+        "member_sha256": "425ce6167588002c19af3ae5eeba91b7a35c8d55d651da8c23700076d99a3c16",
+        "trace_sha256": "9c1faa9b5e2dd2474469b23b9750dc2e134ffe6a5753731652118ddc266bbb50",
+        "samples": 1440000,
+        "duration_seconds": 60.0,
+        "channels": 1,
+        "units": {
+          "1": 1159,
+          "2": 1172,
+          "3": 1141
+        },
+        "truth_events_total": 3472,
+        "source_data_min_max": [
+          -1.3912473986159561,
+          1.8987620952848303
+        ]
+      },
+      {
+        "name": "C_Difficult1_noise02",
+        "zip_member": "Simulator/C_Difficult1_noise02.mat",
+        "member_sha256": "e89f8540968f6ecc174c34bf8b3983781a4bf56a64bbe13ebf0a16259b37968c",
+        "trace_sha256": "1352040552b86f0bbac1e8626f23fe9424f741b7358509b0b84bb7625c3ea431",
+        "samples": 1440000,
+        "duration_seconds": 60.0,
+        "channels": 1,
+        "units": {
+          "1": 1136,
+          "2": 1099,
+          "3": 1179
+        },
+        "truth_events_total": 3414,
+        "source_data_min_max": [
+          -1.6852239323472413,
+          2.072493059800644
+        ]
+      },
+      {
+        "name": "C_Difficult2_noise005",
+        "zip_member": "Simulator/C_Difficult2_noise005.mat",
+        "member_sha256": "0e6edd5ed87d073d1e9db1a6b7df726a59c4ddb9da5c4f0cea9c481e96601079",
+        "trace_sha256": "a9d999d346e194df39d3534d3aee308706cefec2ad06f52b9787ca86ef7e6293",
+        "samples": 1440000,
+        "duration_seconds": 60.0,
+        "channels": 1,
+        "units": {
+          "1": 1120,
+          "2": 1109,
+          "3": 1135
+        },
+        "truth_events_total": 3364,
+        "source_data_min_max": [
+          -0.6224256040447251,
+          2.1061470233772983
+        ]
+      },
+      {
+        "name": "C_Difficult2_noise01",
+        "zip_member": "Simulator/C_Difficult2_noise01.mat",
+        "member_sha256": "f726720bcd3bfa179e9278137905edf756de2de1f21e35fba758eb75e947db71",
+        "trace_sha256": "14acfbfbd785d096ae945f6cc6114423b642bb5e552d65df5bda9c3de5d85d2a",
+        "samples": 1440000,
+        "duration_seconds": 60.0,
+        "channels": 1,
+        "units": {
+          "1": 1187,
+          "2": 1136,
+          "3": 1139
+        },
+        "truth_events_total": 3462,
+        "source_data_min_max": [
+          -0.7258671186943022,
+          2.037536221377641
+        ]
+      },
+      {
+        "name": "C_Difficult2_noise015",
+        "zip_member": "Simulator/C_Difficult2_noise015.mat",
+        "member_sha256": "c88bfde6df8ddf5f424179e35ea742dc58fa5e584dbfdf1cb3bf0305964db677",
+        "trace_sha256": "5873124f066f52feec7ba2a090305eb8478471187afae5bd61bf847e8804448d",
+        "samples": 1440000,
+        "duration_seconds": 60.0,
+        "channels": 1,
+        "units": {
+          "1": 1142,
+          "2": 1113,
+          "3": 1185
+        },
+        "truth_events_total": 3440,
+        "source_data_min_max": [
+          -0.8530951871985304,
+          2.164589279603189
+        ]
+      },
+      {
+        "name": "C_Difficult2_noise02",
+        "zip_member": "Simulator/C_Difficult2_noise02.mat",
+        "member_sha256": "be4720b97af08b70a92a2d3cd52b7a82d9a3b2921f5126a90cd7ae34a6347465",
+        "trace_sha256": "0935ed9abe4a93403a398774bc249e35ade9ffad0a5f67633fa794e0529bc7be",
+        "samples": 1440000,
+        "duration_seconds": 60.0,
+        "channels": 1,
+        "units": {
+          "1": 1151,
+          "2": 1195,
+          "3": 1147
+        },
+        "truth_events_total": 3493,
+        "source_data_min_max": [
+          -1.1062261011484997,
+          2.3911443178077634
+        ]
+      }
+    ],
+    "runtime_seconds_including_conversion": 2.7732546920005916
+  },
+  "aggregates": [
+    {
+      "polarity": "negative",
+      "tolerance_ms": 0.5,
+      "tp": 1101,
+      "fp": 25825,
+      "fn": 54018,
+      "precision": 0.0408898462452648,
+      "recall": 0.019974963261307353,
+      "f1": 0.026838929855567066
+    },
+    {
+      "polarity": "negative",
+      "tolerance_ms": 1.0,
+      "tp": 5580,
+      "fp": 21346,
+      "fn": 49539,
+      "precision": 0.20723464309589246,
+      "recall": 0.10123550862678932,
+      "f1": 0.1360229142543726
+    },
+    {
+      "polarity": "negative",
+      "tolerance_ms": 2.0,
+      "tp": 26922,
+      "fp": 4,
+      "fn": 28197,
+      "precision": 0.9998514447002896,
+      "recall": 0.48843411527785335,
+      "f1": 0.6562739959778171
+    },
+    {
+      "polarity": "positive",
+      "tolerance_ms": 0.5,
+      "tp": 1876,
+      "fp": 44198,
+      "fn": 53243,
+      "precision": 0.04071710726223032,
+      "recall": 0.034035450570583645,
+      "f1": 0.037077663474746274
+    },
+    {
+      "polarity": "positive",
+      "tolerance_ms": 1.0,
+      "tp": 31114,
+      "fp": 14960,
+      "fn": 24005,
+      "precision": 0.6753049442201675,
+      "recall": 0.5644877446978356,
+      "f1": 0.6149437214036544
+    },
+    {
+      "polarity": "positive",
+      "tolerance_ms": 2.0,
+      "tp": 45067,
+      "fp": 1007,
+      "fn": 10052,
+      "precision": 0.9781438555367452,
+      "recall": 0.8176309439576189,
+      "f1": 0.8907137845503147
+    }
+  ],
+  "invariance_checks": [
+    {
+      "check": "single_sample_batches",
+      "exact_event_index_match": true,
+      "reference_events": 3251,
+      "test_events": 3251
+    },
+    {
+      "check": "whole_trace_batch",
+      "exact_event_index_match": true,
+      "reference_events": 3251,
+      "test_events": 3251
+    },
+    {
+      "check": "amplitude_scale_1000x",
+      "exact_event_index_match": true,
+      "reference_events": 3251,
+      "test_events": 3251
+    }
+  ],
+  "results": [
+    {
+      "dataset": "C_Easy1_noise005",
+      "polarity": "negative",
+      "tolerance_ms": 0.5,
+      "tp": 124,
+      "fp": 3195,
+      "fn": 3376,
+      "truth_events": 3500,
+      "detected_events": 3319,
+      "precision": 0.037360650798433266,
+      "recall": 0.03542857142857143,
+      "f1": 0.03636896905704649,
+      "matched_delta_ms_median": -0.020833333333333332,
+      "matched_delta_ms_p05_p95": [
+        -0.4583333333333333,
+        0.4583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.02677029360967185,
+        "2": 0.045060658578856154,
+        "3": 0.034511784511784514
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3319,
+        "nonfinite_display": 0,
+        "rms": 0.00011988056817798084,
+        "threshold": -0.0004795222727119234,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise005",
+      "polarity": "negative",
+      "tolerance_ms": 1.0,
+      "tp": 1213,
+      "fp": 2106,
+      "fn": 2287,
+      "truth_events": 3500,
+      "detected_events": 3319,
+      "precision": 0.36547152756854473,
+      "recall": 0.3465714285714286,
+      "f1": 0.35577064085643056,
+      "matched_delta_ms_median": 0.9166666666666666,
+      "matched_delta_ms_p05_p95": [
+        -0.25,
+        0.9583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.02936096718480138,
+        "2": 0.9878682842287695,
+        "3": 0.03282828282828283
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3319,
+        "nonfinite_display": 0,
+        "rms": 0.00011988056817798084,
+        "threshold": -0.0004795222727119234,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise005",
+      "polarity": "negative",
+      "tolerance_ms": 2.0,
+      "tp": 3319,
+      "fp": 0,
+      "fn": 181,
+      "truth_events": 3500,
+      "detected_events": 3319,
+      "precision": 1.0,
+      "recall": 0.9482857142857143,
+      "f1": 0.9734565185511072,
+      "matched_delta_ms_median": 1.0833333333333333,
+      "matched_delta_ms_p05_p95": [
+        0.9166666666666666,
+        1.3333333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.9490500863557858,
+        "2": 0.9211438474870017,
+        "3": 0.9739057239057239
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3319,
+        "nonfinite_display": 0,
+        "rms": 0.00011988056817798084,
+        "threshold": -0.0004795222727119234,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise005",
+      "polarity": "positive",
+      "tolerance_ms": 0.5,
+      "tp": 165,
+      "fp": 3654,
+      "fn": 3335,
+      "truth_events": 3500,
+      "detected_events": 3819,
+      "precision": 0.04320502749410841,
+      "recall": 0.047142857142857146,
+      "f1": 0.04508812679327777,
+      "matched_delta_ms_median": 0.0,
+      "matched_delta_ms_p05_p95": [
+        -0.5,
+        0.4583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.03454231433506045,
+        "2": 0.05545927209705372,
+        "3": 0.05134680134680135
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3819,
+        "nonfinite_display": 0,
+        "rms": 0.00011988056817798084,
+        "threshold": 0.0004795222727119234,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise005",
+      "polarity": "positive",
+      "tolerance_ms": 1.0,
+      "tp": 2269,
+      "fp": 1550,
+      "fn": 1231,
+      "truth_events": 3500,
+      "detected_events": 3819,
+      "precision": 0.5941345902068604,
+      "recall": 0.6482857142857142,
+      "f1": 0.6200300587511955,
+      "matched_delta_ms_median": 0.9166666666666666,
+      "matched_delta_ms_p05_p95": [
+        0.3500000000000002,
+        0.9583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.9792746113989638,
+        "2": 0.02859618717504333,
+        "3": 0.9276094276094277
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3819,
+        "nonfinite_display": 0,
+        "rms": 0.00011988056817798084,
+        "threshold": 0.0004795222727119234,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise005",
+      "polarity": "positive",
+      "tolerance_ms": 2.0,
+      "tp": 3310,
+      "fp": 509,
+      "fn": 190,
+      "truth_events": 3500,
+      "detected_events": 3819,
+      "precision": 0.8667190363969626,
+      "recall": 0.9457142857142857,
+      "f1": 0.9044951496106025,
+      "matched_delta_ms_median": 0.9583333333333333,
+      "matched_delta_ms_p05_p95": [
+        0.875,
+        1.125
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.9620034542314335,
+        "2": 0.9618717504332756,
+        "3": 0.9141414141414141
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3819,
+        "nonfinite_display": 0,
+        "rms": 0.00011988056817798084,
+        "threshold": 0.0004795222727119234,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise01",
+      "polarity": "negative",
+      "tolerance_ms": 0.5,
+      "tp": 135,
+      "fp": 3116,
+      "fn": 3370,
+      "truth_events": 3505,
+      "detected_events": 3251,
+      "precision": 0.04152568440479852,
+      "recall": 0.03851640513552068,
+      "f1": 0.03996447602131439,
+      "matched_delta_ms_median": 0.0,
+      "matched_delta_ms_p05_p95": [
+        -0.4583333333333333,
+        0.4166666666666667
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.03926701570680628,
+        "2": 0.042515500442869794,
+        "3": 0.03414634146341464
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3251,
+        "nonfinite_display": 0,
+        "rms": 0.000141448813983142,
+        "threshold": -0.000565795255932568,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise01",
+      "polarity": "negative",
+      "tolerance_ms": 1.0,
+      "tp": 1163,
+      "fp": 2088,
+      "fn": 2342,
+      "truth_events": 3505,
+      "detected_events": 3251,
+      "precision": 0.3577360812057828,
+      "recall": 0.331811697574893,
+      "f1": 0.34428656009473063,
+      "matched_delta_ms_median": 0.9166666666666666,
+      "matched_delta_ms_p05_p95": [
+        -0.25,
+        0.9583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.03228621291448516,
+        "2": 0.9645704162976085,
+        "3": 0.03008130081300813
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3251,
+        "nonfinite_display": 0,
+        "rms": 0.000141448813983142,
+        "threshold": -0.000565795255932568,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise01",
+      "polarity": "negative",
+      "tolerance_ms": 2.0,
+      "tp": 3251,
+      "fp": 0,
+      "fn": 254,
+      "truth_events": 3505,
+      "detected_events": 3251,
+      "precision": 1.0,
+      "recall": 0.9275320970042796,
+      "f1": 0.9624037892243932,
+      "matched_delta_ms_median": 1.125,
+      "matched_delta_ms_p05_p95": [
+        0.9166666666666666,
+        1.375
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.9022687609075044,
+        "2": 0.9087688219663419,
+        "3": 0.9682926829268292
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3251,
+        "nonfinite_display": 0,
+        "rms": 0.000141448813983142,
+        "threshold": -0.000565795255932568,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise01",
+      "polarity": "positive",
+      "tolerance_ms": 0.5,
+      "tp": 125,
+      "fp": 3067,
+      "fn": 3380,
+      "truth_events": 3505,
+      "detected_events": 3192,
+      "precision": 0.039160401002506263,
+      "recall": 0.03566333808844508,
+      "f1": 0.0373301478273854,
+      "matched_delta_ms_median": 0.041666666666666664,
+      "matched_delta_ms_p05_p95": [
+        -0.44999999999999996,
+        0.4583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.03577661431064572,
+        "2": 0.030115146147032774,
+        "3": 0.04065040650406504
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3192,
+        "nonfinite_display": 0,
+        "rms": 0.000141448813983142,
+        "threshold": 0.000565795255932568,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise01",
+      "polarity": "positive",
+      "tolerance_ms": 1.0,
+      "tp": 1914,
+      "fp": 1278,
+      "fn": 1591,
+      "truth_events": 3505,
+      "detected_events": 3192,
+      "precision": 0.599624060150376,
+      "recall": 0.5460770328102711,
+      "f1": 0.5715992235329251,
+      "matched_delta_ms_median": 0.9583333333333333,
+      "matched_delta_ms_p05_p95": [
+        0.7354166666666669,
+        0.9583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.9712041884816754,
+        "2": 0.012400354295837024,
+        "3": 0.6398373983739838
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3192,
+        "nonfinite_display": 0,
+        "rms": 0.000141448813983142,
+        "threshold": 0.000565795255932568,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise01",
+      "polarity": "positive",
+      "tolerance_ms": 2.0,
+      "tp": 2933,
+      "fp": 259,
+      "fn": 572,
+      "truth_events": 3505,
+      "detected_events": 3192,
+      "precision": 0.918859649122807,
+      "recall": 0.8368045649072753,
+      "f1": 0.875914588621771,
+      "matched_delta_ms_median": 0.9583333333333333,
+      "matched_delta_ms_p05_p95": [
+        0.9166666666666666,
+        1.125
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.9546247818499127,
+        "2": 0.9610274579273693,
+        "3": 0.6130081300813008
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3192,
+        "nonfinite_display": 0,
+        "rms": 0.000141448813983142,
+        "threshold": 0.000565795255932568,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise015",
+      "polarity": "negative",
+      "tolerance_ms": 0.5,
+      "tp": 118,
+      "fp": 2536,
+      "fn": 3349,
+      "truth_events": 3467,
+      "detected_events": 2654,
+      "precision": 0.044461190655614165,
+      "recall": 0.03403518892414191,
+      "f1": 0.0385557915373305,
+      "matched_delta_ms_median": -0.041666666666666664,
+      "matched_delta_ms_p05_p95": [
+        -0.4583333333333333,
+        0.4166666666666667
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.035398230088495575,
+        "2": 0.02707275803722504,
+        "3": 0.03982683982683983
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2654,
+        "nonfinite_display": 0,
+        "rms": 0.00016687053562262338,
+        "threshold": -0.0006674821424904935,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise015",
+      "polarity": "negative",
+      "tolerance_ms": 1.0,
+      "tp": 985,
+      "fp": 1669,
+      "fn": 2482,
+      "truth_events": 3467,
+      "detected_events": 2654,
+      "precision": 0.37113790504898264,
+      "recall": 0.28410729737525237,
+      "f1": 0.32184283613788595,
+      "matched_delta_ms_median": 0.9166666666666666,
+      "matched_delta_ms_p05_p95": [
+        -0.4083333333333332,
+        0.9583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.036283185840707964,
+        "2": 0.7656514382402707,
+        "3": 0.033766233766233764
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2654,
+        "nonfinite_display": 0,
+        "rms": 0.00016687053562262338,
+        "threshold": -0.0006674821424904935,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise015",
+      "polarity": "negative",
+      "tolerance_ms": 2.0,
+      "tp": 2654,
+      "fp": 0,
+      "fn": 813,
+      "truth_events": 3467,
+      "detected_events": 2654,
+      "precision": 1.0,
+      "recall": 0.7655033169887511,
+      "f1": 0.8671785655938572,
+      "matched_delta_ms_median": 1.125,
+      "matched_delta_ms_p05_p95": [
+        0.9166666666666666,
+        1.4166666666666667
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.668141592920354,
+        "2": 0.7191201353637902,
+        "3": 0.9082251082251083
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2654,
+        "nonfinite_display": 0,
+        "rms": 0.00016687053562262338,
+        "threshold": -0.0006674821424904935,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise015",
+      "polarity": "positive",
+      "tolerance_ms": 0.5,
+      "tp": 91,
+      "fp": 2346,
+      "fn": 3376,
+      "truth_events": 3467,
+      "detected_events": 2437,
+      "precision": 0.037340993024210095,
+      "recall": 0.026247476204211133,
+      "f1": 0.030826558265582657,
+      "matched_delta_ms_median": 0.0,
+      "matched_delta_ms_p05_p95": [
+        -0.4583333333333333,
+        0.47916666666666663
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.019469026548672566,
+        "2": 0.02284263959390863,
+        "3": 0.03636363636363636
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2437,
+        "nonfinite_display": 0,
+        "rms": 0.00016687053562262338,
+        "threshold": 0.0006674821424904935,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise015",
+      "polarity": "positive",
+      "tolerance_ms": 1.0,
+      "tp": 1339,
+      "fp": 1098,
+      "fn": 2128,
+      "truth_events": 3467,
+      "detected_events": 2437,
+      "precision": 0.5494460402133771,
+      "recall": 0.3862128641476781,
+      "f1": 0.45359078590785906,
+      "matched_delta_ms_median": 0.9583333333333333,
+      "matched_delta_ms_p05_p95": [
+        0.5,
+        0.9583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.7814159292035399,
+        "2": 0.00676818950930626,
+        "3": 0.3878787878787879
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2437,
+        "nonfinite_display": 0,
+        "rms": 0.00016687053562262338,
+        "threshold": 0.0006674821424904935,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise015",
+      "polarity": "positive",
+      "tolerance_ms": 2.0,
+      "tp": 2289,
+      "fp": 148,
+      "fn": 1178,
+      "truth_events": 3467,
+      "detected_events": 2437,
+      "precision": 0.9392695937628232,
+      "recall": 0.6602249783674646,
+      "f1": 0.7754065040650406,
+      "matched_delta_ms_median": 0.9583333333333333,
+      "matched_delta_ms_p05_p95": [
+        0.9166666666666666,
+        1.1666666666666667
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.7672566371681416,
+        "2": 0.8544839255499154,
+        "3": 0.3567099567099567
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2437,
+        "nonfinite_display": 0,
+        "rms": 0.00016687053562262338,
+        "threshold": 0.0006674821424904935,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise02",
+      "polarity": "negative",
+      "tolerance_ms": 0.5,
+      "tp": 65,
+      "fp": 1626,
+      "fn": 3390,
+      "truth_events": 3455,
+      "detected_events": 1691,
+      "precision": 0.0384387936132466,
+      "recall": 0.01881331403762663,
+      "f1": 0.025262339681305868,
+      "matched_delta_ms_median": 0.041666666666666664,
+      "matched_delta_ms_p05_p95": [
+        -0.49166666666666664,
+        0.44999999999999984
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.02518891687657431,
+        "2": 0.013368983957219251,
+        "3": 0.017513134851138354
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 1691,
+        "nonfinite_display": 0,
+        "rms": 0.00019414551797591285,
+        "threshold": -0.0007765820719036514,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise02",
+      "polarity": "negative",
+      "tolerance_ms": 1.0,
+      "tp": 581,
+      "fp": 1110,
+      "fn": 2874,
+      "truth_events": 3455,
+      "detected_events": 1691,
+      "precision": 0.34358367829686576,
+      "recall": 0.16816208393632417,
+      "f1": 0.22580645161290322,
+      "matched_delta_ms_median": 0.9166666666666666,
+      "matched_delta_ms_p05_p95": [
+        -0.5,
+        0.9583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.028547439126784216,
+        "2": 0.46880570409982175,
+        "3": 0.01838879159369527
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 1691,
+        "nonfinite_display": 0,
+        "rms": 0.00019414551797591285,
+        "threshold": -0.0007765820719036514,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise02",
+      "polarity": "negative",
+      "tolerance_ms": 2.0,
+      "tp": 1691,
+      "fp": 0,
+      "fn": 1764,
+      "truth_events": 3455,
+      "detected_events": 1691,
+      "precision": 1.0,
+      "recall": 0.4894356005788712,
+      "f1": 0.657209483093665,
+      "matched_delta_ms_median": 1.125,
+      "matched_delta_ms_p05_p95": [
+        0.9166666666666666,
+        1.4583333333333335
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.35432409739714527,
+        "2": 0.44028520499108736,
+        "3": 0.6786339754816112
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 1691,
+        "nonfinite_display": 0,
+        "rms": 0.00019414551797591285,
+        "threshold": -0.0007765820719036514,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise02",
+      "polarity": "positive",
+      "tolerance_ms": 0.5,
+      "tp": 62,
+      "fp": 1419,
+      "fn": 3393,
+      "truth_events": 3455,
+      "detected_events": 1481,
+      "precision": 0.04186360567184335,
+      "recall": 0.017945007235890015,
+      "f1": 0.025121555915721232,
+      "matched_delta_ms_median": 0.020833333333333332,
+      "matched_delta_ms_p05_p95": [
+        -0.45625,
+        0.4583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.02434928631402183,
+        "2": 0.0106951871657754,
+        "3": 0.01838879159369527
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 1481,
+        "nonfinite_display": 0,
+        "rms": 0.00019414551797591285,
+        "threshold": 0.0007765820719036514,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise02",
+      "polarity": "positive",
+      "tolerance_ms": 1.0,
+      "tp": 813,
+      "fp": 668,
+      "fn": 2642,
+      "truth_events": 3455,
+      "detected_events": 1481,
+      "precision": 0.548953409858204,
+      "recall": 0.23531114327062227,
+      "f1": 0.3294165316045381,
+      "matched_delta_ms_median": 0.9583333333333333,
+      "matched_delta_ms_p05_p95": [
+        0.3583333333333334,
+        1.0
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.4811083123425693,
+        "2": 0.008021390374331552,
+        "3": 0.202276707530648
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 1481,
+        "nonfinite_display": 0,
+        "rms": 0.00019414551797591285,
+        "threshold": 0.0007765820719036514,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy1_noise02",
+      "polarity": "positive",
+      "tolerance_ms": 2.0,
+      "tp": 1411,
+      "fp": 70,
+      "fn": 2044,
+      "truth_events": 3455,
+      "detected_events": 1481,
+      "precision": 0.9527346387575962,
+      "recall": 0.4083936324167873,
+      "f1": 0.5717179902755267,
+      "matched_delta_ms_median": 1.0,
+      "matched_delta_ms_p05_p95": [
+        0.9166666666666666,
+        1.1666666666666667
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.45759865659109994,
+        "2": 0.5819964349376114,
+        "3": 0.18651488616462347
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 1481,
+        "nonfinite_display": 0,
+        "rms": 0.00019414551797591285,
+        "threshold": 0.0007765820719036514,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise005",
+      "polarity": "negative",
+      "tolerance_ms": 0.5,
+      "tp": 40,
+      "fp": 815,
+      "fn": 3354,
+      "truth_events": 3394,
+      "detected_events": 855,
+      "precision": 0.04678362573099415,
+      "recall": 0.011785503830288745,
+      "f1": 0.01882795951988703,
+      "matched_delta_ms_median": 0.10416666666666666,
+      "matched_delta_ms_p05_p95": [
+        -0.41875,
+        0.4187499999999999
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.02127659574468085,
+        "2": 0.008108108108108109,
+        "3": 0.006055363321799308
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 855,
+        "nonfinite_display": 0,
+        "rms": 0.00010466699435869357,
+        "threshold": -0.0004186679774347743,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise005",
+      "polarity": "negative",
+      "tolerance_ms": 1.0,
+      "tp": 278,
+      "fp": 577,
+      "fn": 3116,
+      "truth_events": 3394,
+      "detected_events": 855,
+      "precision": 0.32514619883040935,
+      "recall": 0.08190925162050677,
+      "f1": 0.13085431866321487,
+      "matched_delta_ms_median": 0.9583333333333333,
+      "matched_delta_ms_p05_p95": [
+        -0.625,
+        1.0
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.034574468085106384,
+        "2": 0.20810810810810812,
+        "3": 0.006920415224913495
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 855,
+        "nonfinite_display": 0,
+        "rms": 0.00010466699435869357,
+        "threshold": -0.0004186679774347743,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise005",
+      "polarity": "negative",
+      "tolerance_ms": 2.0,
+      "tp": 855,
+      "fp": 0,
+      "fn": 2539,
+      "truth_events": 3394,
+      "detected_events": 855,
+      "precision": 1.0,
+      "recall": 0.2519151443724219,
+      "f1": 0.4024476347375853,
+      "matched_delta_ms_median": 1.4583333333333335,
+      "matched_delta_ms_p05_p95": [
+        0.9583333333333333,
+        1.7916666666666667
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.10106382978723404,
+        "2": 0.19099099099099098,
+        "3": 0.45761245674740486
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 855,
+        "nonfinite_display": 0,
+        "rms": 0.00010466699435869357,
+        "threshold": -0.0004186679774347743,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise005",
+      "polarity": "positive",
+      "tolerance_ms": 0.5,
+      "tp": 125,
+      "fp": 3137,
+      "fn": 3269,
+      "truth_events": 3394,
+      "detected_events": 3262,
+      "precision": 0.03832004904966278,
+      "recall": 0.036829699469652324,
+      "f1": 0.03756009615384615,
+      "matched_delta_ms_median": 0.0,
+      "matched_delta_ms_p05_p95": [
+        -0.5,
+        0.5
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.03546099290780142,
+        "2": 0.03873873873873874,
+        "3": 0.03633217993079585
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3263,
+        "nonfinite_display": 0,
+        "rms": 0.00010466699435869357,
+        "threshold": 0.0004186679774347743,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise005",
+      "polarity": "positive",
+      "tolerance_ms": 1.0,
+      "tp": 1247,
+      "fp": 2015,
+      "fn": 2147,
+      "truth_events": 3394,
+      "detected_events": 3262,
+      "precision": 0.3822808093194359,
+      "recall": 0.3674130819092516,
+      "f1": 0.3746995192307692,
+      "matched_delta_ms_median": 0.8333333333333334,
+      "matched_delta_ms_p05_p95": [
+        -0.25,
+        0.8333333333333334
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.040780141843971635,
+        "2": 0.04594594594594595,
+        "3": 0.9948096885813149
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3263,
+        "nonfinite_display": 0,
+        "rms": 0.00010466699435869357,
+        "threshold": 0.0004186679774347743,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise005",
+      "polarity": "positive",
+      "tolerance_ms": 2.0,
+      "tp": 3262,
+      "fp": 0,
+      "fn": 132,
+      "truth_events": 3394,
+      "detected_events": 3262,
+      "precision": 1.0,
+      "recall": 0.9611078373600471,
+      "f1": 0.9801682692307693,
+      "matched_delta_ms_median": 1.0833333333333333,
+      "matched_delta_ms_p05_p95": [
+        0.7916666666666666,
+        1.125
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.9698581560283688,
+        "2": 0.9648648648648649,
+        "3": 0.948961937716263
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3263,
+        "nonfinite_display": 0,
+        "rms": 0.00010466699435869357,
+        "threshold": 0.0004186679774347743,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise01",
+      "polarity": "negative",
+      "tolerance_ms": 0.5,
+      "tp": 16,
+      "fp": 381,
+      "fn": 3492,
+      "truth_events": 3508,
+      "detected_events": 397,
+      "precision": 0.04030226700251889,
+      "recall": 0.004561003420752566,
+      "f1": 0.00819462227912932,
+      "matched_delta_ms_median": -0.10416666666666666,
+      "matched_delta_ms_p05_p95": [
+        -0.375,
+        0.46875
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.005190311418685121,
+        "2": 0.005244755244755245,
+        "3": 0.0033112582781456954
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 397,
+        "nonfinite_display": 0,
+        "rms": 0.000136031259781319,
+        "threshold": -0.000544125039125276,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise01",
+      "polarity": "negative",
+      "tolerance_ms": 1.0,
+      "tp": 139,
+      "fp": 258,
+      "fn": 3369,
+      "truth_events": 3508,
+      "detected_events": 397,
+      "precision": 0.3501259445843829,
+      "recall": 0.039623717217787915,
+      "f1": 0.07119078104993598,
+      "matched_delta_ms_median": 0.9583333333333333,
+      "matched_delta_ms_p05_p95": [
+        -0.7541666666666667,
+        1.0
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.01730103806228374,
+        "2": 0.0979020979020979,
+        "3": 0.005794701986754967
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 397,
+        "nonfinite_display": 0,
+        "rms": 0.000136031259781319,
+        "threshold": -0.000544125039125276,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise01",
+      "polarity": "negative",
+      "tolerance_ms": 2.0,
+      "tp": 396,
+      "fp": 1,
+      "fn": 3112,
+      "truth_events": 3508,
+      "detected_events": 397,
+      "precision": 0.9974811083123426,
+      "recall": 0.11288483466362599,
+      "f1": 0.2028169014084507,
+      "matched_delta_ms_median": 1.4583333333333335,
+      "matched_delta_ms_p05_p95": [
+        0.9895833333333333,
+        1.875
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.0726643598615917,
+        "2": 0.07080419580419581,
+        "3": 0.1912251655629139
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 397,
+        "nonfinite_display": 0,
+        "rms": 0.000136031259781319,
+        "threshold": -0.000544125039125276,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise01",
+      "polarity": "positive",
+      "tolerance_ms": 0.5,
+      "tp": 162,
+      "fp": 3201,
+      "fn": 3346,
+      "truth_events": 3508,
+      "detected_events": 3363,
+      "precision": 0.04817127564674398,
+      "recall": 0.046180159635119726,
+      "f1": 0.047154708193858245,
+      "matched_delta_ms_median": 0.020833333333333332,
+      "matched_delta_ms_p05_p95": [
+        -0.4583333333333333,
+        0.5
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.04671280276816609,
+        "2": 0.04807692307692308,
+        "3": 0.043874172185430466
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3363,
+        "nonfinite_display": 0,
+        "rms": 0.000136031259781319,
+        "threshold": 0.000544125039125276,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise01",
+      "polarity": "positive",
+      "tolerance_ms": 1.0,
+      "tp": 1317,
+      "fp": 2046,
+      "fn": 2191,
+      "truth_events": 3508,
+      "detected_events": 3363,
+      "precision": 0.39161462979482603,
+      "recall": 0.37542759407069554,
+      "f1": 0.3833503129093291,
+      "matched_delta_ms_median": 0.8333333333333334,
+      "matched_delta_ms_p05_p95": [
+        -0.3416666666666668,
+        0.875
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.04930795847750865,
+        "2": 0.05244755244755245,
+        "3": 0.9933774834437086
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3363,
+        "nonfinite_display": 0,
+        "rms": 0.000136031259781319,
+        "threshold": 0.000544125039125276,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise01",
+      "polarity": "positive",
+      "tolerance_ms": 2.0,
+      "tp": 3363,
+      "fp": 0,
+      "fn": 145,
+      "truth_events": 3508,
+      "detected_events": 3363,
+      "precision": 1.0,
+      "recall": 0.9586659064994298,
+      "f1": 0.9788968126910202,
+      "matched_delta_ms_median": 1.0833333333333333,
+      "matched_delta_ms_p05_p95": [
+        0.7916666666666666,
+        1.125
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.9714532871972318,
+        "2": 0.9597902097902098,
+        "3": 0.945364238410596
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3363,
+        "nonfinite_display": 0,
+        "rms": 0.000136031259781319,
+        "threshold": 0.000544125039125276,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise015",
+      "polarity": "negative",
+      "tolerance_ms": 0.5,
+      "tp": 7,
+      "fp": 196,
+      "fn": 3393,
+      "truth_events": 3400,
+      "detected_events": 203,
+      "precision": 0.034482758620689655,
+      "recall": 0.002058823529411765,
+      "f1": 0.0038856508465167916,
+      "matched_delta_ms_median": 0.375,
+      "matched_delta_ms_p05_p95": [
+        -0.4166666666666667,
+        0.375
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.002548853016142736,
+        "2": 0.002742230347349177,
+        "3": 0.0008857395925597874
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 203,
+        "nonfinite_display": 0,
+        "rms": 0.00016140150338657253,
+        "threshold": -0.0006456060135462901,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise015",
+      "polarity": "negative",
+      "tolerance_ms": 1.0,
+      "tp": 74,
+      "fp": 129,
+      "fn": 3326,
+      "truth_events": 3400,
+      "detected_events": 203,
+      "precision": 0.3645320197044335,
+      "recall": 0.02176470588235294,
+      "f1": 0.041076880377463224,
+      "matched_delta_ms_median": 0.9583333333333333,
+      "matched_delta_ms_p05_p95": [
+        -0.8333333333333334,
+        1.0
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.013593882752761258,
+        "2": 0.04753199268738574,
+        "3": 0.005314437555358724
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 203,
+        "nonfinite_display": 0,
+        "rms": 0.00016140150338657253,
+        "threshold": -0.0006456060135462901,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise015",
+      "polarity": "negative",
+      "tolerance_ms": 2.0,
+      "tp": 201,
+      "fp": 2,
+      "fn": 3199,
+      "truth_events": 3400,
+      "detected_events": 203,
+      "precision": 0.9901477832512315,
+      "recall": 0.05911764705882353,
+      "f1": 0.1115736885928393,
+      "matched_delta_ms_median": 1.5,
+      "matched_delta_ms_p05_p95": [
+        0.9583333333333333,
+        1.9166666666666665
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.037383177570093455,
+        "2": 0.033820840950639856,
+        "3": 0.10628875110717449
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 203,
+        "nonfinite_display": 0,
+        "rms": 0.00016140150338657253,
+        "threshold": -0.0006456060135462901,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise015",
+      "polarity": "positive",
+      "tolerance_ms": 0.5,
+      "tp": 122,
+      "fp": 3011,
+      "fn": 3278,
+      "truth_events": 3400,
+      "detected_events": 3133,
+      "precision": 0.03894031279923396,
+      "recall": 0.03588235294117647,
+      "f1": 0.037348844328792284,
+      "matched_delta_ms_median": 0.041666666666666664,
+      "matched_delta_ms_p05_p95": [
+        -0.4583333333333333,
+        0.4583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.03653355989804588,
+        "2": 0.033820840950639856,
+        "3": 0.03720106288751107
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3133,
+        "nonfinite_display": 0,
+        "rms": 0.00016140150338657253,
+        "threshold": 0.0006456060135462901,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise015",
+      "polarity": "positive",
+      "tolerance_ms": 1.0,
+      "tp": 1089,
+      "fp": 2044,
+      "fn": 2311,
+      "truth_events": 3400,
+      "detected_events": 3133,
+      "precision": 0.34759016916693264,
+      "recall": 0.32029411764705884,
+      "f1": 0.3333843563447115,
+      "matched_delta_ms_median": 0.8333333333333334,
+      "matched_delta_ms_p05_p95": [
+        -0.44166666666666643,
+        0.875
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.033984706881903144,
+        "2": 0.0356489945155393,
+        "3": 0.8945969884853853
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3133,
+        "nonfinite_display": 0,
+        "rms": 0.00016140150338657253,
+        "threshold": 0.0006456060135462901,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise015",
+      "polarity": "positive",
+      "tolerance_ms": 2.0,
+      "tp": 3131,
+      "fp": 2,
+      "fn": 269,
+      "truth_events": 3400,
+      "detected_events": 3133,
+      "precision": 0.999361634216406,
+      "recall": 0.9208823529411765,
+      "f1": 0.958518291749579,
+      "matched_delta_ms_median": 1.125,
+      "matched_delta_ms_p05_p95": [
+        0.8333333333333334,
+        1.1666666666666667
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.9490229396771452,
+        "2": 0.9661791590493601,
+        "3": 0.8476527900797166
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3133,
+        "nonfinite_display": 0,
+        "rms": 0.00016140150338657253,
+        "threshold": 0.0006456060135462901,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise02",
+      "polarity": "negative",
+      "tolerance_ms": 0.5,
+      "tp": 5,
+      "fp": 95,
+      "fn": 3509,
+      "truth_events": 3514,
+      "detected_events": 100,
+      "precision": 0.05,
+      "recall": 0.0014228799089356858,
+      "f1": 0.002767017155506364,
+      "matched_delta_ms_median": -0.3333333333333333,
+      "matched_delta_ms_p05_p95": [
+        -0.48333333333333334,
+        0.2249999999999999
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.0025380710659898475,
+        "2": 0.0008431703204047217,
+        "3": 0.0008726003490401396
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 100,
+        "nonfinite_display": 0,
+        "rms": 0.00019599546805811036,
+        "threshold": -0.0007839818722324414,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise02",
+      "polarity": "negative",
+      "tolerance_ms": 1.0,
+      "tp": 38,
+      "fp": 62,
+      "fn": 3476,
+      "truth_events": 3514,
+      "detected_events": 100,
+      "precision": 0.38,
+      "recall": 0.010813887307911212,
+      "f1": 0.021029330381848368,
+      "matched_delta_ms_median": 0.9583333333333333,
+      "matched_delta_ms_p05_p95": [
+        -0.7208333333333333,
+        1.0
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.004230118443316413,
+        "2": 0.026981450252951095,
+        "3": 0.0008726003490401396
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 100,
+        "nonfinite_display": 0,
+        "rms": 0.00019599546805811036,
+        "threshold": -0.0007839818722324414,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise02",
+      "polarity": "negative",
+      "tolerance_ms": 2.0,
+      "tp": 99,
+      "fp": 1,
+      "fn": 3415,
+      "truth_events": 3514,
+      "detected_events": 100,
+      "precision": 0.99,
+      "recall": 0.028173022196926578,
+      "f1": 0.05478693967902601,
+      "matched_delta_ms_median": 1.5416666666666667,
+      "matched_delta_ms_p05_p95": [
+        0.9583333333333333,
+        1.875
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.02622673434856176,
+        "2": 0.021079258010118045,
+        "3": 0.037521815008726006
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 100,
+        "nonfinite_display": 0,
+        "rms": 0.00019599546805811036,
+        "threshold": -0.0007839818722324414,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise02",
+      "polarity": "positive",
+      "tolerance_ms": 0.5,
+      "tp": 118,
+      "fp": 2371,
+      "fn": 3396,
+      "truth_events": 3514,
+      "detected_events": 2489,
+      "precision": 0.047408597830454,
+      "recall": 0.03357996585088219,
+      "f1": 0.03931367649508579,
+      "matched_delta_ms_median": -0.041666666666666664,
+      "matched_delta_ms_p05_p95": [
+        -0.4583333333333333,
+        0.42291666666666633
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.031302876480541454,
+        "2": 0.021922428330522766,
+        "3": 0.04799301919720768
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2489,
+        "nonfinite_display": 0,
+        "rms": 0.00019599546805811036,
+        "threshold": 0.0007839818722324414,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise02",
+      "polarity": "positive",
+      "tolerance_ms": 1.0,
+      "tp": 719,
+      "fp": 1770,
+      "fn": 2795,
+      "truth_events": 3514,
+      "detected_events": 2489,
+      "precision": 0.28887103254319,
+      "recall": 0.20461013090495161,
+      "f1": 0.23954689322005665,
+      "matched_delta_ms_median": 0.8333333333333334,
+      "matched_delta_ms_p05_p95": [
+        -0.6708333333333334,
+        0.875
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.046531302876480544,
+        "2": 0.03035413153456998,
+        "3": 0.5479930191972077
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2489,
+        "nonfinite_display": 0,
+        "rms": 0.00019599546805811036,
+        "threshold": 0.0007839818722324414,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Easy2_noise02",
+      "polarity": "positive",
+      "tolerance_ms": 2.0,
+      "tp": 2486,
+      "fp": 3,
+      "fn": 1028,
+      "truth_events": 3514,
+      "detected_events": 2489,
+      "precision": 0.9987946966653274,
+      "recall": 0.707455890722823,
+      "f1": 0.8282525403964685,
+      "matched_delta_ms_median": 1.125,
+      "matched_delta_ms_p05_p95": [
+        0.8333333333333334,
+        1.1666666666666667
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.7351945854483926,
+        "2": 0.8988195615514334,
+        "3": 0.48080279232111695
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2489,
+        "nonfinite_display": 0,
+        "rms": 0.00019599546805811036,
+        "threshold": 0.0007839818722324414,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise005",
+      "polarity": "negative",
+      "tolerance_ms": 0.5,
+      "tp": 137,
+      "fp": 2913,
+      "fn": 3238,
+      "truth_events": 3375,
+      "detected_events": 3050,
+      "precision": 0.04491803278688525,
+      "recall": 0.04059259259259259,
+      "f1": 0.04264591439688716,
+      "matched_delta_ms_median": 0.041666666666666664,
+      "matched_delta_ms_p05_p95": [
+        -0.4583333333333333,
+        0.4583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.04039497307001795,
+        "2": 0.04594594594594595,
+        "3": 0.035621198957428324
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3050,
+        "nonfinite_display": 0,
+        "rms": 0.00010011093335281847,
+        "threshold": -0.0004004437334112739,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise005",
+      "polarity": "negative",
+      "tolerance_ms": 1.0,
+      "tp": 246,
+      "fp": 2804,
+      "fn": 3129,
+      "truth_events": 3375,
+      "detected_events": 3050,
+      "precision": 0.08065573770491803,
+      "recall": 0.07288888888888889,
+      "f1": 0.07657587548638133,
+      "matched_delta_ms_median": -0.08333333333333333,
+      "matched_delta_ms_p05_p95": [
+        -0.9583333333333333,
+        0.7083333333333334
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.07360861759425494,
+        "2": 0.08198198198198198,
+        "3": 0.0634231103388358
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3050,
+        "nonfinite_display": 0,
+        "rms": 0.00010011093335281847,
+        "threshold": -0.0004004437334112739,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise005",
+      "polarity": "negative",
+      "tolerance_ms": 2.0,
+      "tp": 3050,
+      "fp": 0,
+      "fn": 325,
+      "truth_events": 3375,
+      "detected_events": 3050,
+      "precision": 1.0,
+      "recall": 0.9037037037037037,
+      "f1": 0.9494163424124513,
+      "matched_delta_ms_median": 1.0833333333333333,
+      "matched_delta_ms_p05_p95": [
+        1.0833333333333333,
+        1.1666666666666667
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.9631956912028725,
+        "2": 0.7837837837837838,
+        "3": 0.9617723718505647
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3050,
+        "nonfinite_display": 0,
+        "rms": 0.00010011093335281847,
+        "threshold": -0.0004004437334112739,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise005",
+      "polarity": "positive",
+      "tolerance_ms": 0.5,
+      "tp": 143,
+      "fp": 3099,
+      "fn": 3232,
+      "truth_events": 3375,
+      "detected_events": 3242,
+      "precision": 0.044108574953732264,
+      "recall": 0.04237037037037037,
+      "f1": 0.043222003929273084,
+      "matched_delta_ms_median": -0.041666666666666664,
+      "matched_delta_ms_p05_p95": [
+        -0.4583333333333333,
+        0.4583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.03949730700179533,
+        "2": 0.04684684684684685,
+        "3": 0.04083405734144222
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3242,
+        "nonfinite_display": 0,
+        "rms": 0.00010011093335281847,
+        "threshold": 0.0004004437334112739,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise005",
+      "polarity": "positive",
+      "tolerance_ms": 1.0,
+      "tp": 3241,
+      "fp": 1,
+      "fn": 134,
+      "truth_events": 3375,
+      "detected_events": 3242,
+      "precision": 0.999691548426897,
+      "recall": 0.9602962962962963,
+      "f1": 0.9795980051382802,
+      "matched_delta_ms_median": 0.9166666666666666,
+      "matched_delta_ms_p05_p95": [
+        0.875,
+        0.9583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.966786355475763,
+        "2": 0.9558558558558559,
+        "3": 0.9582971329278888
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3242,
+        "nonfinite_display": 0,
+        "rms": 0.00010011093335281847,
+        "threshold": 0.0004004437334112739,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise005",
+      "polarity": "positive",
+      "tolerance_ms": 2.0,
+      "tp": 3242,
+      "fp": 0,
+      "fn": 133,
+      "truth_events": 3375,
+      "detected_events": 3242,
+      "precision": 1.0,
+      "recall": 0.9605925925925926,
+      "f1": 0.9799002569140094,
+      "matched_delta_ms_median": 0.9166666666666666,
+      "matched_delta_ms_p05_p95": [
+        0.875,
+        0.9583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.9676840215439856,
+        "2": 0.9540540540540541,
+        "3": 0.9600347523892268
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3242,
+        "nonfinite_display": 0,
+        "rms": 0.00010011093335281847,
+        "threshold": 0.0004004437334112739,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise01",
+      "polarity": "negative",
+      "tolerance_ms": 0.5,
+      "tp": 96,
+      "fp": 2542,
+      "fn": 3334,
+      "truth_events": 3430,
+      "detected_events": 2638,
+      "precision": 0.03639120545868082,
+      "recall": 0.027988338192419825,
+      "f1": 0.03164139749505603,
+      "matched_delta_ms_median": -0.041666666666666664,
+      "matched_delta_ms_p05_p95": [
+        -0.46875,
+        0.46875
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.01808785529715762,
+        "2": 0.038227628149435276,
+        "3": 0.027728085867620753
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2638,
+        "nonfinite_display": 0,
+        "rms": 0.00013508030456180317,
+        "threshold": -0.0005403212182472127,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise01",
+      "polarity": "negative",
+      "tolerance_ms": 1.0,
+      "tp": 212,
+      "fp": 2426,
+      "fn": 3218,
+      "truth_events": 3430,
+      "detected_events": 2638,
+      "precision": 0.0803639120545868,
+      "recall": 0.061807580174927115,
+      "f1": 0.06987475280158208,
+      "matched_delta_ms_median": -0.25,
+      "matched_delta_ms_p05_p95": [
+        -0.9583333333333333,
+        0.75
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.04392764857881137,
+        "2": 0.08514335360556038,
+        "3": 0.05635062611806798
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2638,
+        "nonfinite_display": 0,
+        "rms": 0.00013508030456180317,
+        "threshold": -0.0005403212182472127,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise01",
+      "polarity": "negative",
+      "tolerance_ms": 2.0,
+      "tp": 2638,
+      "fp": 0,
+      "fn": 792,
+      "truth_events": 3430,
+      "detected_events": 2638,
+      "precision": 1.0,
+      "recall": 0.7690962099125365,
+      "f1": 0.8694792353328938,
+      "matched_delta_ms_median": 1.0833333333333333,
+      "matched_delta_ms_p05_p95": [
+        1.0833333333333333,
+        1.1666666666666667
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.9664082687338501,
+        "2": 0.38748913987836664,
+        "3": 0.9570661896243292
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2638,
+        "nonfinite_display": 0,
+        "rms": 0.00013508030456180317,
+        "threshold": -0.0005403212182472127,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise01",
+      "polarity": "positive",
+      "tolerance_ms": 0.5,
+      "tp": 124,
+      "fp": 3179,
+      "fn": 3306,
+      "truth_events": 3430,
+      "detected_events": 3303,
+      "precision": 0.03754162882228277,
+      "recall": 0.036151603498542274,
+      "f1": 0.03683350660923808,
+      "matched_delta_ms_median": 0.0,
+      "matched_delta_ms_p05_p95": [
+        -0.4583333333333333,
+        0.45208333333333306
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.031007751937984496,
+        "2": 0.036490008688097306,
+        "3": 0.04114490161001789
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3303,
+        "nonfinite_display": 0,
+        "rms": 0.00013508030456180317,
+        "threshold": 0.0005403212182472127,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise01",
+      "polarity": "positive",
+      "tolerance_ms": 1.0,
+      "tp": 3302,
+      "fp": 1,
+      "fn": 128,
+      "truth_events": 3430,
+      "detected_events": 3303,
+      "precision": 0.9996972449288526,
+      "recall": 0.9626822157434403,
+      "f1": 0.9808406356750334,
+      "matched_delta_ms_median": 0.9166666666666666,
+      "matched_delta_ms_p05_p95": [
+        0.875,
+        0.9583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.970714900947459,
+        "2": 0.9617723718505647,
+        "3": 0.9552772808586762
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3303,
+        "nonfinite_display": 0,
+        "rms": 0.00013508030456180317,
+        "threshold": 0.0005403212182472127,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise01",
+      "polarity": "positive",
+      "tolerance_ms": 2.0,
+      "tp": 3302,
+      "fp": 1,
+      "fn": 128,
+      "truth_events": 3430,
+      "detected_events": 3303,
+      "precision": 0.9996972449288526,
+      "recall": 0.9626822157434403,
+      "f1": 0.9808406356750334,
+      "matched_delta_ms_median": 0.9166666666666666,
+      "matched_delta_ms_p05_p95": [
+        0.875,
+        0.9583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.970714900947459,
+        "2": 0.9617723718505647,
+        "3": 0.9552772808586762
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3303,
+        "nonfinite_display": 0,
+        "rms": 0.00013508030456180317,
+        "threshold": 0.0005403212182472127,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise015",
+      "polarity": "negative",
+      "tolerance_ms": 0.5,
+      "tp": 79,
+      "fp": 2023,
+      "fn": 3377,
+      "truth_events": 3456,
+      "detected_events": 2102,
+      "precision": 0.03758325404376784,
+      "recall": 0.022858796296296297,
+      "f1": 0.028427491903562432,
+      "matched_delta_ms_median": -0.041666666666666664,
+      "matched_delta_ms_p05_p95": [
+        -0.4166666666666667,
+        0.4208333333333331
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.01993067590987868,
+        "2": 0.02317596566523605,
+        "3": 0.025505716798592787
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2102,
+        "nonfinite_display": 0,
+        "rms": 0.00015922002482582747,
+        "threshold": -0.0006368800993033099,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise015",
+      "polarity": "negative",
+      "tolerance_ms": 1.0,
+      "tp": 150,
+      "fp": 1952,
+      "fn": 3306,
+      "truth_events": 3456,
+      "detected_events": 2102,
+      "precision": 0.071360608943863,
+      "recall": 0.043402777777777776,
+      "f1": 0.05397625044980209,
+      "matched_delta_ms_median": -0.0625,
+      "matched_delta_ms_p05_p95": [
+        -0.9166666666666666,
+        0.7729166666666659
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.0415944540727903,
+        "2": 0.0463519313304721,
+        "3": 0.04221635883905013
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2102,
+        "nonfinite_display": 0,
+        "rms": 0.00015922002482582747,
+        "threshold": -0.0006368800993033099,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise015",
+      "polarity": "negative",
+      "tolerance_ms": 2.0,
+      "tp": 2102,
+      "fp": 0,
+      "fn": 1354,
+      "truth_events": 3456,
+      "detected_events": 2102,
+      "precision": 1.0,
+      "recall": 0.6082175925925926,
+      "f1": 0.7563871896365599,
+      "matched_delta_ms_median": 1.125,
+      "matched_delta_ms_p05_p95": [
+        1.0833333333333333,
+        1.1666666666666667
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.8249566724436742,
+        "2": 0.17253218884120172,
+        "3": 0.8346525945470537
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2102,
+        "nonfinite_display": 0,
+        "rms": 0.00015922002482582747,
+        "threshold": -0.0006368800993033099,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise015",
+      "polarity": "positive",
+      "tolerance_ms": 0.5,
+      "tp": 132,
+      "fp": 3059,
+      "fn": 3324,
+      "truth_events": 3456,
+      "detected_events": 3191,
+      "precision": 0.04136634283923535,
+      "recall": 0.03819444444444445,
+      "f1": 0.03971716563863397,
+      "matched_delta_ms_median": 0.041666666666666664,
+      "matched_delta_ms_p05_p95": [
+        -0.4583333333333333,
+        0.47708333333333286
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.03466204506065858,
+        "2": 0.030901287553648068,
+        "3": 0.04925241864555849
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3191,
+        "nonfinite_display": 0,
+        "rms": 0.00015922002482582747,
+        "threshold": 0.0006368800993033099,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise015",
+      "polarity": "positive",
+      "tolerance_ms": 1.0,
+      "tp": 3188,
+      "fp": 3,
+      "fn": 268,
+      "truth_events": 3456,
+      "detected_events": 3191,
+      "precision": 0.9990598558445628,
+      "recall": 0.9224537037037037,
+      "f1": 0.9592297276967052,
+      "matched_delta_ms_median": 0.9166666666666666,
+      "matched_delta_ms_p05_p95": [
+        0.875,
+        0.9583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.8812824956672444,
+        "2": 0.9622317596566523,
+        "3": 0.9234828496042217
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3191,
+        "nonfinite_display": 0,
+        "rms": 0.00015922002482582747,
+        "threshold": 0.0006368800993033099,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise015",
+      "polarity": "positive",
+      "tolerance_ms": 2.0,
+      "tp": 3188,
+      "fp": 3,
+      "fn": 268,
+      "truth_events": 3456,
+      "detected_events": 3191,
+      "precision": 0.9990598558445628,
+      "recall": 0.9224537037037037,
+      "f1": 0.9592297276967052,
+      "matched_delta_ms_median": 0.9166666666666666,
+      "matched_delta_ms_p05_p95": [
+        0.875,
+        0.9583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.8847487001733102,
+        "2": 0.9613733905579399,
+        "3": 0.920844327176781
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3191,
+        "nonfinite_display": 0,
+        "rms": 0.00015922002482582747,
+        "threshold": 0.0006368800993033099,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise02",
+      "polarity": "negative",
+      "tolerance_ms": 0.5,
+      "tp": 40,
+      "fp": 1209,
+      "fn": 3361,
+      "truth_events": 3401,
+      "detected_events": 1249,
+      "precision": 0.032025620496397116,
+      "recall": 0.011761246692149369,
+      "f1": 0.017204301075268817,
+      "matched_delta_ms_median": 0.125,
+      "matched_delta_ms_p05_p95": [
+        -0.46041666666666664,
+        0.46041666666666653
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.009708737864077669,
+        "2": 0.01738334858188472,
+        "3": 0.00851063829787234
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 1249,
+        "nonfinite_display": 0,
+        "rms": 0.00018490278619432495,
+        "threshold": -0.0007396111447772998,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise02",
+      "polarity": "negative",
+      "tolerance_ms": 1.0,
+      "tp": 89,
+      "fp": 1160,
+      "fn": 3312,
+      "truth_events": 3401,
+      "detected_events": 1249,
+      "precision": 0.07125700560448359,
+      "recall": 0.026168773890032342,
+      "f1": 0.038279569892473116,
+      "matched_delta_ms_median": 0.125,
+      "matched_delta_ms_p05_p95": [
+        -0.9583333333333333,
+        0.7749999999999997
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.018534863195057368,
+        "2": 0.04483074107959744,
+        "3": 0.016170212765957447
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 1249,
+        "nonfinite_display": 0,
+        "rms": 0.00018490278619432495,
+        "threshold": -0.0007396111447772998,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise02",
+      "polarity": "negative",
+      "tolerance_ms": 2.0,
+      "tp": 1249,
+      "fp": 0,
+      "fn": 2152,
+      "truth_events": 3401,
+      "detected_events": 1249,
+      "precision": 1.0,
+      "recall": 0.367244927962364,
+      "f1": 0.5372043010752688,
+      "matched_delta_ms_median": 1.125,
+      "matched_delta_ms_p05_p95": [
+        1.0833333333333333,
+        1.1666666666666667
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.5154457193292145,
+        "2": 0.06312900274473925,
+        "3": 0.5072340425531915
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 1249,
+        "nonfinite_display": 0,
+        "rms": 0.00018490278619432495,
+        "threshold": -0.0007396111447772998,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise02",
+      "polarity": "positive",
+      "tolerance_ms": 0.5,
+      "tp": 75,
+      "fp": 2378,
+      "fn": 3326,
+      "truth_events": 3401,
+      "detected_events": 2453,
+      "precision": 0.030574806359559722,
+      "recall": 0.022052337547780066,
+      "f1": 0.02562350529552443,
+      "matched_delta_ms_median": -0.041666666666666664,
+      "matched_delta_ms_p05_p95": [
+        -0.4583333333333333,
+        0.4166666666666667
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.02030008826125331,
+        "2": 0.024702653247941447,
+        "3": 0.02127659574468085
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2453,
+        "nonfinite_display": 0,
+        "rms": 0.00018490278619432495,
+        "threshold": 0.0007396111447772998,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise02",
+      "polarity": "positive",
+      "tolerance_ms": 1.0,
+      "tp": 2447,
+      "fp": 6,
+      "fn": 954,
+      "truth_events": 3401,
+      "detected_events": 2453,
+      "precision": 0.9975540154912352,
+      "recall": 0.7194942663922376,
+      "f1": 0.8360095661086436,
+      "matched_delta_ms_median": 0.9583333333333333,
+      "matched_delta_ms_p05_p95": [
+        0.9166666666666666,
+        0.9583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.6213592233009708,
+        "2": 0.8051235132662397,
+        "3": 0.734468085106383
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2453,
+        "nonfinite_display": 0,
+        "rms": 0.00018490278619432495,
+        "threshold": 0.0007396111447772998,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult1_noise02",
+      "polarity": "positive",
+      "tolerance_ms": 2.0,
+      "tp": 2447,
+      "fp": 6,
+      "fn": 954,
+      "truth_events": 3401,
+      "detected_events": 2453,
+      "precision": 0.9975540154912352,
+      "recall": 0.7194942663922376,
+      "f1": 0.8360095661086436,
+      "matched_delta_ms_median": 0.9583333333333333,
+      "matched_delta_ms_p05_p95": [
+        0.9166666666666666,
+        0.9583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.617828773168579,
+        "2": 0.8032936870997255,
+        "3": 0.7395744680851064
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2453,
+        "nonfinite_display": 0,
+        "rms": 0.00018490278619432495,
+        "threshold": 0.0007396111447772998,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise005",
+      "polarity": "negative",
+      "tolerance_ms": 0.5,
+      "tp": 105,
+      "fp": 2101,
+      "fn": 3248,
+      "truth_events": 3353,
+      "detected_events": 2206,
+      "precision": 0.047597461468721666,
+      "recall": 0.031315240083507306,
+      "f1": 0.037776578521316787,
+      "matched_delta_ms_median": 0.0,
+      "matched_delta_ms_p05_p95": [
+        -0.4583333333333333,
+        0.49166666666666653
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.017040358744394617,
+        "2": 0.02077687443541102,
+        "3": 0.05570291777188329
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2206,
+        "nonfinite_display": 0,
+        "rms": 0.0001091110908147744,
+        "threshold": -0.0004364443632590976,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise005",
+      "polarity": "negative",
+      "tolerance_ms": 1.0,
+      "tp": 174,
+      "fp": 2032,
+      "fn": 3179,
+      "truth_events": 3353,
+      "detected_events": 2206,
+      "precision": 0.07887579329102448,
+      "recall": 0.05189382642409782,
+      "f1": 0.06260118726389638,
+      "matched_delta_ms_median": -0.14583333333333331,
+      "matched_delta_ms_p05_p95": [
+        -0.9583333333333333,
+        0.6395833333333331
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.03587443946188341,
+        "2": 0.04787714543812105,
+        "3": 0.07161803713527852
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2206,
+        "nonfinite_display": 0,
+        "rms": 0.0001091110908147744,
+        "threshold": -0.0004364443632590976,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise005",
+      "polarity": "negative",
+      "tolerance_ms": 2.0,
+      "tp": 2206,
+      "fp": 0,
+      "fn": 1147,
+      "truth_events": 3353,
+      "detected_events": 2206,
+      "precision": 1.0,
+      "recall": 0.6579182821354012,
+      "f1": 0.7936679258859507,
+      "matched_delta_ms_median": 1.3333333333333333,
+      "matched_delta_ms_p05_p95": [
+        1.1666666666666667,
+        1.4166666666666667
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.9246636771300448,
+        "2": 0.9611562782294489,
+        "3": 0.09814323607427056
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2206,
+        "nonfinite_display": 0,
+        "rms": 0.0001091110908147744,
+        "threshold": -0.0004364443632590976,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise005",
+      "polarity": "positive",
+      "tolerance_ms": 0.5,
+      "tp": 136,
+      "fp": 3082,
+      "fn": 3217,
+      "truth_events": 3353,
+      "detected_events": 3218,
+      "precision": 0.04226227470478558,
+      "recall": 0.04056069191768565,
+      "f1": 0.04139400395677979,
+      "matched_delta_ms_median": 0.020833333333333332,
+      "matched_delta_ms_p05_p95": [
+        -0.46875,
+        0.42708333333333337
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.034080717488789235,
+        "2": 0.04336043360433604,
+        "3": 0.04420866489832007
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3219,
+        "nonfinite_display": 0,
+        "rms": 0.0001091110908147744,
+        "threshold": 0.0004364443632590976,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise005",
+      "polarity": "positive",
+      "tolerance_ms": 1.0,
+      "tp": 2711,
+      "fp": 507,
+      "fn": 642,
+      "truth_events": 3353,
+      "detected_events": 3218,
+      "precision": 0.8424487259167185,
+      "recall": 0.8085296749179839,
+      "f1": 0.8251407700502207,
+      "matched_delta_ms_median": 0.875,
+      "matched_delta_ms_p05_p95": [
+        0.7916666666666666,
+        1.0
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.9668161434977578,
+        "2": 0.4914182475158085,
+        "3": 0.9628647214854111
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3219,
+        "nonfinite_display": 0,
+        "rms": 0.0001091110908147744,
+        "threshold": 0.0004364443632590976,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise005",
+      "polarity": "positive",
+      "tolerance_ms": 2.0,
+      "tp": 3218,
+      "fp": 0,
+      "fn": 135,
+      "truth_events": 3353,
+      "detected_events": 3218,
+      "precision": 1.0,
+      "recall": 0.959737548464062,
+      "f1": 0.9794551818596865,
+      "matched_delta_ms_median": 0.9166666666666666,
+      "matched_delta_ms_p05_p95": [
+        0.7916666666666666,
+        1.0416666666666667
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.9605381165919282,
+        "2": 0.964769647696477,
+        "3": 0.9540229885057471
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3219,
+        "nonfinite_display": 0,
+        "rms": 0.0001091110908147744,
+        "threshold": 0.0004364443632590976,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise01",
+      "polarity": "negative",
+      "tolerance_ms": 0.5,
+      "tp": 73,
+      "fp": 1756,
+      "fn": 3379,
+      "truth_events": 3452,
+      "detected_events": 1829,
+      "precision": 0.03991252050300711,
+      "recall": 0.021147161066048668,
+      "f1": 0.027646279113804205,
+      "matched_delta_ms_median": -0.041666666666666664,
+      "matched_delta_ms_p05_p95": [
+        -0.4166666666666667,
+        0.4583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.01775147928994083,
+        "2": 0.0088261253309797,
+        "3": 0.03697183098591549
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 1829,
+        "nonfinite_display": 0,
+        "rms": 0.0001308423477036695,
+        "threshold": -0.000523369390814678,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise01",
+      "polarity": "negative",
+      "tolerance_ms": 1.0,
+      "tp": 133,
+      "fp": 1696,
+      "fn": 3319,
+      "truth_events": 3452,
+      "detected_events": 1829,
+      "precision": 0.07271733187534171,
+      "recall": 0.03852838933951332,
+      "f1": 0.050369248248437797,
+      "matched_delta_ms_median": -0.25,
+      "matched_delta_ms_p05_p95": [
+        -0.9166666666666666,
+        0.5833333333333334
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.032121724429416736,
+        "2": 0.02294792586054722,
+        "3": 0.06073943661971831
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 1829,
+        "nonfinite_display": 0,
+        "rms": 0.0001308423477036695,
+        "threshold": -0.000523369390814678,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise01",
+      "polarity": "negative",
+      "tolerance_ms": 2.0,
+      "tp": 1829,
+      "fp": 0,
+      "fn": 1623,
+      "truth_events": 3452,
+      "detected_events": 1829,
+      "precision": 1.0,
+      "recall": 0.529837775202781,
+      "f1": 0.6926718424540806,
+      "matched_delta_ms_median": 1.375,
+      "matched_delta_ms_p05_p95": [
+        1.2083333333333335,
+        1.4583333333333335
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.6339814032121724,
+        "2": 0.8896734333627537,
+        "3": 0.0625
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 1829,
+        "nonfinite_display": 0,
+        "rms": 0.0001308423477036695,
+        "threshold": -0.000523369390814678,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise01",
+      "polarity": "positive",
+      "tolerance_ms": 0.5,
+      "tp": 108,
+      "fp": 3191,
+      "fn": 3344,
+      "truth_events": 3452,
+      "detected_events": 3299,
+      "precision": 0.032737193088814794,
+      "recall": 0.031286210892236384,
+      "f1": 0.03199525996148719,
+      "matched_delta_ms_median": 0.0,
+      "matched_delta_ms_p05_p95": [
+        -0.48541666666666666,
+        0.4583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.030431107354184278,
+        "2": 0.02736098852603707,
+        "3": 0.03609154929577465
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3299,
+        "nonfinite_display": 0,
+        "rms": 0.0001308423477036695,
+        "threshold": 0.000523369390814678,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise01",
+      "polarity": "positive",
+      "tolerance_ms": 1.0,
+      "tp": 2469,
+      "fp": 830,
+      "fn": 983,
+      "truth_events": 3452,
+      "detected_events": 3299,
+      "precision": 0.7484086086692937,
+      "recall": 0.7152375434530707,
+      "f1": 0.7314471930084432,
+      "matched_delta_ms_median": 0.875,
+      "matched_delta_ms_p05_p95": [
+        0.7916666666666666,
+        1.0
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.9535080304311073,
+        "2": 0.21006178287731686,
+        "3": 0.9709507042253521
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3299,
+        "nonfinite_display": 0,
+        "rms": 0.0001308423477036695,
+        "threshold": 0.000523369390814678,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise01",
+      "polarity": "positive",
+      "tolerance_ms": 2.0,
+      "tp": 3299,
+      "fp": 0,
+      "fn": 153,
+      "truth_events": 3452,
+      "detected_events": 3299,
+      "precision": 1.0,
+      "recall": 0.9556778679026651,
+      "f1": 0.9773366908606133,
+      "matched_delta_ms_median": 0.9166666666666666,
+      "matched_delta_ms_p05_p95": [
+        0.7916666666666666,
+        1.0833333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.9425190194420964,
+        "2": 0.969991173874669,
+        "3": 0.9551056338028169
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 3299,
+        "nonfinite_display": 0,
+        "rms": 0.0001308423477036695,
+        "threshold": 0.000523369390814678,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise015",
+      "polarity": "negative",
+      "tolerance_ms": 0.5,
+      "tp": 37,
+      "fp": 885,
+      "fn": 3389,
+      "truth_events": 3426,
+      "detected_events": 922,
+      "precision": 0.04013015184381779,
+      "recall": 0.010799766491535318,
+      "f1": 0.01701931922723091,
+      "matched_delta_ms_median": 0.0,
+      "matched_delta_ms_p05_p95": [
+        -0.4666666666666667,
+        0.4583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.011433597185576077,
+        "2": 0.007220216606498195,
+        "3": 0.013547840812870448
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 922,
+        "nonfinite_display": 0,
+        "rms": 0.0001616438455930523,
+        "threshold": -0.0006465753823722092,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise015",
+      "polarity": "negative",
+      "tolerance_ms": 1.0,
+      "tp": 65,
+      "fp": 857,
+      "fn": 3361,
+      "truth_events": 3426,
+      "detected_events": 922,
+      "precision": 0.07049891540130152,
+      "recall": 0.018972562755399883,
+      "f1": 0.029898804047838085,
+      "matched_delta_ms_median": -0.125,
+      "matched_delta_ms_p05_p95": [
+        -0.9583333333333333,
+        0.625
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.019349164467897976,
+        "2": 0.015342960288808664,
+        "3": 0.02201524132091448
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 922,
+        "nonfinite_display": 0,
+        "rms": 0.0001616438455930523,
+        "threshold": -0.0006465753823722092,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise015",
+      "polarity": "negative",
+      "tolerance_ms": 2.0,
+      "tp": 922,
+      "fp": 0,
+      "fn": 2504,
+      "truth_events": 3426,
+      "detected_events": 922,
+      "precision": 1.0,
+      "recall": 0.26911850554582606,
+      "f1": 0.42410303587856485,
+      "matched_delta_ms_median": 1.375,
+      "matched_delta_ms_p05_p95": [
+        1.2083333333333335,
+        1.5
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.2647317502198769,
+        "2": 0.526173285198556,
+        "3": 0.03217612193056731
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 922,
+        "nonfinite_display": 0,
+        "rms": 0.0001616438455930523,
+        "threshold": -0.0006465753823722092,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise015",
+      "polarity": "positive",
+      "tolerance_ms": 0.5,
+      "tp": 123,
+      "fp": 2498,
+      "fn": 3303,
+      "truth_events": 3426,
+      "detected_events": 2621,
+      "precision": 0.04692865318580695,
+      "recall": 0.03590192644483362,
+      "f1": 0.040681329584918144,
+      "matched_delta_ms_median": -0.041666666666666664,
+      "matched_delta_ms_p05_p95": [
+        -0.4541666666666666,
+        0.5
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.040457343887423045,
+        "2": 0.042418772563176894,
+        "3": 0.02540220152413209
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2621,
+        "nonfinite_display": 0,
+        "rms": 0.0001616438455930523,
+        "threshold": 0.0006465753823722092,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise015",
+      "polarity": "positive",
+      "tolerance_ms": 1.0,
+      "tp": 1883,
+      "fp": 738,
+      "fn": 1543,
+      "truth_events": 3426,
+      "detected_events": 2621,
+      "precision": 0.7184280808851583,
+      "recall": 0.549620548744892,
+      "f1": 0.6227881594178931,
+      "matched_delta_ms_median": 0.875,
+      "matched_delta_ms_p05_p95": [
+        0.7916666666666666,
+        0.9583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.6130167106420404,
+        "2": 0.07220216606498195,
+        "3": 0.9364944961896697
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2621,
+        "nonfinite_display": 0,
+        "rms": 0.0001616438455930523,
+        "threshold": 0.0006465753823722092,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise015",
+      "polarity": "positive",
+      "tolerance_ms": 2.0,
+      "tp": 2618,
+      "fp": 3,
+      "fn": 808,
+      "truth_events": 3426,
+      "detected_events": 2621,
+      "precision": 0.9988553987027852,
+      "recall": 0.7641564506713369,
+      "f1": 0.8658839093765504,
+      "matched_delta_ms_median": 0.9166666666666666,
+      "matched_delta_ms_p05_p95": [
+        0.8333333333333334,
+        1.125
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.6033421284080914,
+        "2": 0.759927797833935,
+        "3": 0.9229466553767993
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 2621,
+        "nonfinite_display": 0,
+        "rms": 0.0001616438455930523,
+        "threshold": 0.0006465753823722092,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise02",
+      "polarity": "negative",
+      "tolerance_ms": 0.5,
+      "tp": 24,
+      "fp": 436,
+      "fn": 3459,
+      "truth_events": 3483,
+      "detected_events": 460,
+      "precision": 0.05217391304347826,
+      "recall": 0.0068906115417743325,
+      "f1": 0.012173471975653057,
+      "matched_delta_ms_median": 0.125,
+      "matched_delta_ms_p05_p95": [
+        -0.475,
+        0.4041666666666665
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.006974716652136007,
+        "2": 0.003352891869237217,
+        "3": 0.010498687664041995
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 460,
+        "nonfinite_display": 0,
+        "rms": 0.00019295847780841452,
+        "threshold": -0.0007718339112336581,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise02",
+      "polarity": "negative",
+      "tolerance_ms": 1.0,
+      "tp": 40,
+      "fp": 420,
+      "fn": 3443,
+      "truth_events": 3483,
+      "detected_events": 460,
+      "precision": 0.08695652173913043,
+      "recall": 0.011484352569623888,
+      "f1": 0.02028911995942176,
+      "matched_delta_ms_median": -0.25,
+      "matched_delta_ms_p05_p95": [
+        -0.8770833333333333,
+        0.5479166666666663
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.00959023539668701,
+        "2": 0.009220452640402346,
+        "3": 0.015748031496062992
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 460,
+        "nonfinite_display": 0,
+        "rms": 0.00019295847780841452,
+        "threshold": -0.0007718339112336581,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise02",
+      "polarity": "negative",
+      "tolerance_ms": 2.0,
+      "tp": 460,
+      "fp": 0,
+      "fn": 3023,
+      "truth_events": 3483,
+      "detected_events": 460,
+      "precision": 1.0,
+      "recall": 0.1320700545506747,
+      "f1": 0.23332487953335024,
+      "matched_delta_ms_median": 1.375,
+      "matched_delta_ms_p05_p95": [
+        1.2083333333333335,
+        1.5
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.12641673931996514,
+        "2": 0.24056999161777032,
+        "3": 0.024496937882764653
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 460,
+        "nonfinite_display": 0,
+        "rms": 0.00019295847780841452,
+        "threshold": -0.0007718339112336581,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise02",
+      "polarity": "positive",
+      "tolerance_ms": 0.5,
+      "tp": 65,
+      "fp": 1506,
+      "fn": 3418,
+      "truth_events": 3483,
+      "detected_events": 1571,
+      "precision": 0.041374920432845325,
+      "recall": 0.018662072925638817,
+      "f1": 0.025722200237435693,
+      "matched_delta_ms_median": 0.08333333333333333,
+      "matched_delta_ms_p05_p95": [
+        -0.4166666666666667,
+        0.4583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.01918047079337402,
+        "2": 0.018440905280804692,
+        "3": 0.01837270341207349
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 1571,
+        "nonfinite_display": 0,
+        "rms": 0.00019295847780841452,
+        "threshold": 0.0007718339112336581,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise02",
+      "polarity": "positive",
+      "tolerance_ms": 1.0,
+      "tp": 1166,
+      "fp": 405,
+      "fn": 2317,
+      "truth_events": 3483,
+      "detected_events": 1571,
+      "precision": 0.7422024188415022,
+      "recall": 0.3347688774045363,
+      "f1": 0.46141669964384646,
+      "matched_delta_ms_median": 0.875,
+      "matched_delta_ms_p05_p95": [
+        0.7916666666666666,
+        0.9583333333333333
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.3095030514385353,
+        "2": 0.04358759430008382,
+        "3": 0.6640419947506562
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 1571,
+        "nonfinite_display": 0,
+        "rms": 0.00019295847780841452,
+        "threshold": 0.0007718339112336581,
+        "ready": true
+      }
+    },
+    {
+      "dataset": "C_Difficult2_noise02",
+      "polarity": "positive",
+      "tolerance_ms": 2.0,
+      "tp": 1568,
+      "fp": 3,
+      "fn": 1915,
+      "truth_events": 3483,
+      "detected_events": 1571,
+      "precision": 0.9980903882877148,
+      "recall": 0.4501866207292564,
+      "f1": 0.6204986149584487,
+      "matched_delta_ms_median": 0.9166666666666666,
+      "matched_delta_ms_p05_p95": [
+        0.8333333333333334,
+        1.125
+      ],
+      "per_source_unit_recall_diagnostic_only": {
+        "1": 0.29293809938971227,
+        "2": 0.41408214585079633,
+        "3": 0.6456692913385826
+      },
+      "terminal": {
+        "samples": 1440000,
+        "events": 1571,
+        "nonfinite_display": 0,
+        "rms": 0.00019295847780841452,
+        "threshold": 0.0007718339112336581,
+        "ready": true
+      }
+    }
+  ]
+}

@@ -9,6 +9,12 @@ namespace ccv2 {
 struct StreamBlockInfo {
     quint64 epoch{0};
     QVector<qint64> frameIndices;
+    // Optional per-file-frame mask. False samples are placeholders/unusable and
+    // must not enter neural detection. Empty means no validity annotation.
+    QVector<bool> frameValid;
+    // Loss is known but its locations cannot be reconstructed (legacy input).
+    // Consumers must not treat such a block as analysis-ready neural samples.
+    bool integrityUnknown{false};
 
     bool valid() const { return !frameIndices.isEmpty(); }
     qint64 firstFrame() const { return frameIndices.first(); }
