@@ -4,6 +4,7 @@
 /builds/
 /dist/
 /release/
+/release_assets/
 /logs/
 docs/build_log.txt
 **/CMakeFiles/

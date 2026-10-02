@@ -115,9 +115,24 @@ loopback servers, not real FPGA hardware.
 - `tools/`: optional external Python dummy servers.
 - `NL_CommandCenter_v6_config.ini`: shipped configuration template.
 
-Build output, DLLs, logs, recorded BIN/NS6 files, and machine activation caches
-are excluded. Historic prototype files still present under `src/` are built
+Build output, DLLs, logs, and machine activation caches are excluded. Large
+recorded BIN samples are published as Release assets; see the sample-data
+section below. Historic prototype files still present under `src/` are built
 only when listed in `CMakeLists.txt`.
+
+## Recorded sample data
+
+The original `ADC_DATA.bin` supplied for application validation is available
+from the [recorded-data release](https://github.com/QianLei31/NL_source/releases/tag/sample-adc-data-20261001).
+
+- [Download ADC_DATA.bin](https://github.com/QianLei31/NL_source/releases/download/sample-adc-data-20261001/ADC_DATA.bin)
+- [Data description and playback notes](datasets/README.md)
+- [Metadata](datasets/ADC_DATA.metadata.json) and [SHA-256 checksum](datasets/SHA256SUMS.txt)
+
+The uploaded file is unchanged. Its sampling rate and TDM mode are not
+confirmed; set them to the original acquisition parameters for quantitative
+analysis. The 620-byte incomplete tail is ignored by the application's
+frame-aligned reader.
 
 ## Basic use
 

@@ -1,0 +1,29 @@
+{
+  "filename": "ADC_DATA.bin",
+  "bytes": 339730028,
+  "sha256": "5cf03681e067c27cb5193c590b363bbd4b3f3d4c38a0186157744bd70e47bba0",
+  "published_on": "2026-10-01",
+  "source_file_modified_utc": "2026-06-20T17:13:37.9010315Z",
+  "acquisition_date": null,
+  "sampling_rate_hz": null,
+  "tdm_enabled": null,
+  "front_end_gain": null,
+  "original_file_preserved": true,
+  "original_session_manifest_available": false,
+  "application_expected_format": {
+    "channels": 256,
+    "bytes_per_word": 4,
+    "endianness": "little",
+    "frame_bytes": 1024,
+    "adc_mask": "0xFFF",
+    "timestamp_shift": 12
+  },
+  "complete_frames": 331767,
+  "trailing_bytes": 620,
+  "initial_timestamp_inspection": {
+    "frames_inspected": 4,
+    "all_channel_timestamp_values_in_inspected_frames": 0,
+    "entire_file_continuity_verified": false
+  },
+  "download_url": "https://github.com/QianLei31/NL_source/releases/download/sample-adc-data-20261001/ADC_DATA.bin"
+}
