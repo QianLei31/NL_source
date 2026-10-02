@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/theme">
+        <file alias="tokens-dark.qss">tokens-dark.qss</file>
+        <file alias="tokens-soft-dark.qss">tokens-soft-dark.qss</file>
+        <file alias="tokens-light.qss">tokens-light.qss</file>
+        <file alias="tokens-midnight-indigo.qss">tokens-midnight-indigo.qss</file>
+        <file alias="widgets.qss">widgets.qss</file>
+        <file alias="pages.qss">pages.qss</file>
+        <file alias="plot.qss">plot.qss</file>
+    </qresource>
+</RCC>

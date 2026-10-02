@@ -1,0 +1,14 @@
+/* plot.qss — Plot and waveform widget styling */
+
+/* WaveformWidget and StackWaveformView background */
+QWidget[class="waveform-plot"] {
+    background: @plot-bg;
+    border: 1px solid @card-border;
+    border-radius: @radius-md;
+}
+
+/* Placeholder text styling (rendered in paintEvent, but this sets the container) */
+QWidget[class="waveform-plot"][state="empty"] {
+    border-style: dashed;
+    border-color: @card-border;
+}

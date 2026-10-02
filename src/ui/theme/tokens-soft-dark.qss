@@ -1,0 +1,61 @@
+/* tokens-soft-dark.qss — 柔和护眼低对比 (Soft Eye-Care Low Contrast) */
+/* Warm blue-grey surfaces, softened text, desaturated accents.        */
+/* Built for long staring sessions — no pure black, no pure white.     */
+
+/* Surface layers — warm-leaning blue-grey */
+@app-bg: #1C2026;
+@app-bg-grad-end: #21262D;
+@card-bg: #242931;
+@card-bg-elevated: #2C323B;
+@card-border: #373E48;
+@card-border-hi: #525B67;
+@surface-sunken: #191D22;
+@surface-panel: #1F242A;
+@surface-control: #2A3039;
+@input-bg: #1B1F25;
+@console-bg: #171B20;
+@tab-bg: #1E232A;
+@tab-hover-bg: #272D35;
+@tab-active-bg: #232830;
+@analyzer-pane-bg: #20252C;
+
+/* Brand / Accent — soft muted blue */
+@primary: #7FA8D9;
+@primary-hover: #9CBEE6;
+@primary-press: #6790C4;
+@primary-soft-bg: rgba(127, 168, 217, 0.12);
+@primary-press-bg: rgba(127, 168, 217, 0.20);
+@selection-bg: rgba(127, 168, 217, 0.28);
+@secondary: #98A3B2;
+@violet: #AB9BD6;
+
+/* Status — desaturated, gentle */
+@success: #7BC49C;
+@warning: #DDB877;
+@error: #E08C84;
+@info: #79BBC4;
+@success-soft-bg: rgba(123, 196, 156, 0.14);
+@warning-soft-bg: rgba(221, 184, 119, 0.15);
+@error-soft-bg: rgba(224, 140, 132, 0.14);
+@error-press-bg: rgba(224, 140, 132, 0.22);
+
+/* Text — softened, never pure white */
+@text-primary: #DDE2E8;
+@text-secondary: #AAB3BF;
+@text-disabled: #6E7884;
+@text-on-primary: #16191E;
+
+/* Plot */
+@plot-bg: #1B1F25;
+@plot-grid: #2D343D;
+@plot-axis: #9AA4B0;
+@plot-wave: #79BBC4;
+
+/* Spacing / Radius */
+@radius-sm: 4px;
+@radius-md: 6px;
+@radius-lg: 8px;
+@gap-xs: 4px;
+@gap-sm: 8px;
+@gap-md: 12px;
+@gap-lg: 16px;

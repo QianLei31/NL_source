@@ -1,0 +1,10 @@
+* text=auto
+*.cpp text eol=lf
+*.h text eol=lf
+*.cmake text eol=lf
+CMakeLists.txt text eol=lf
+*.md text eol=lf
+*.qss text eol=lf
+*.qrc text eol=lf
+*.ini text eol=lf
+*.py text eol=lf

@@ -1,0 +1,1201 @@
+/* widgets.qss — Dark Precision Instrument Style (Keysight/BlackMagic) */
+
+QWidget {
+    font-family: "Microsoft YaHei UI", "Segoe UI", "Source Han Sans CN", sans-serif;
+    font-size: 13px;
+    color: @text-primary;
+    background: transparent;
+}
+
+QMainWindow {
+    background: @app-bg;
+}
+
+QWidget#topStatusBar {
+    background: @surface-panel;
+    border-bottom: 1px solid @card-border;
+}
+
+QSplitter::handle {
+    background: @card-border;
+}
+QSplitter::handle:horizontal {
+    width: 1px;
+}
+QSplitter::handle:vertical {
+    height: 1px;
+}
+
+/* === Buttons — Clean, functional, restrained === */
+QPushButton {
+    background: @surface-control;
+    color: @text-primary;
+    border: 1px solid @card-border;
+    border-radius: @radius-md;
+    padding: 6px 16px;
+    font-weight: 500;
+    font-size: 12px;
+    min-height: 30px;
+}
+QPushButton:hover {
+    background: @card-bg-elevated;
+    border-color: @primary;
+    color: @text-primary;
+}
+QPushButton:pressed {
+    background: @surface-sunken;
+    border-color: @primary-press;
+}
+QPushButton:focus {
+    border-color: @primary;
+    outline: none;
+}
+QPushButton:disabled {
+    background: @surface-sunken;
+    color: @text-disabled;
+    border-color: @card-border;
+}
+
+QPushButton#primary {
+    background: @primary;
+    color: @text-on-primary;
+    border: 1px solid @primary;
+    font-weight: 600;
+}
+QPushButton#primary:hover { background: @primary-hover; border-color: @primary-hover; }
+QPushButton#primary:pressed { background: @primary-press; border-color: @primary-press; }
+
+QPushButton[variant="primary"] {
+    background: @primary;
+    color: @text-on-primary;
+    border: 1px solid @primary;
+    font-weight: 700;
+}
+QPushButton[variant="primary"]:hover {
+    background: @primary-hover;
+    border-color: @primary-hover;
+    color: @text-on-primary;
+}
+QPushButton[variant="primary"]:pressed {
+    background: @primary-press;
+    border-color: @primary-press;
+}
+
+QPushButton#danger {
+    background: transparent;
+    color: @error;
+    border: 1px solid @error;
+}
+QPushButton#danger:hover { background: @error-soft-bg; }
+QPushButton#danger:pressed { background: @error-press-bg; }
+
+QPushButton[variant="danger"] {
+    background: transparent;
+    color: @error;
+    border: 1px solid @error;
+    font-weight: 600;
+}
+QPushButton[variant="danger"]:hover {
+    background: @error-soft-bg;
+    color: @error;
+}
+QPushButton[variant="secondary"] {
+    background: @card-bg;
+    color: @text-secondary;
+    border: 1px solid @card-border;
+}
+QPushButton[variant="secondary"]:hover {
+    background: @card-bg-elevated;
+    color: @text-primary;
+    border-color: @card-border-hi;
+}
+QPushButton#ghost {
+    background: transparent;
+    color: @text-secondary;
+    border: none;
+}
+QPushButton#ghost:hover { color: @text-primary; }
+
+QPushButton#settingsIconButton {
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    padding: 0;
+    min-width: 30px;
+    min-height: 30px;
+}
+QPushButton#settingsIconButton:hover {
+    background: @card-bg-elevated;
+}
+QPushButton#settingsIconButton:pressed {
+    background: @primary-soft-bg;
+}
+
+/* === Inputs — Subtle, precise === */
+QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
+    background: @input-bg;
+    color: @text-primary;
+    border: 1px solid @card-border;
+    border-radius: @radius-md;
+    padding: 5px 10px;
+    min-height: 30px;
+    font-family: "JetBrains Mono", "Consolas", monospace;
+    font-size: 13px;
+    selection-background-color: @selection-bg;
+}
+QLineEdit:hover, QSpinBox:hover, QDoubleSpinBox:hover, QComboBox:hover {
+    border-color: @card-border-hi;
+}
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
+    border-color: @primary;
+}
+QLineEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled, QComboBox:disabled {
+    background: @surface-sunken;
+    color: @text-disabled;
+}
+
+QComboBox::drop-down { border: none; width: 24px; }
+QComboBox QAbstractItemView {
+    background: @card-bg;
+    border: 1px solid @card-border;
+    color: @text-primary;
+    selection-background-color: @card-bg-elevated;
+}
+
+/* === Cards — Subtle containers === */
+QFrame[role="card"], QGroupBox {
+    background: @card-bg;
+    border: 1px solid @card-border;
+    border-radius: @radius-lg;
+    padding: 16px;
+}
+QGroupBox {
+    margin-top: 18px;
+    font-weight: 600;
+    color: @text-secondary;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 16px;
+    padding: 0 8px;
+    color: @text-secondary;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+/* === Metric Card === */
+QFrame[role="metric-card"] {
+    background: @card-bg;
+    border: 1px solid @card-border;
+    border-radius: @radius-md;
+    padding: 12px 14px;
+    min-width: 110px;
+}
+QFrame[role="metric-card"]:hover {
+    border-color: @card-border-hi;
+}
+
+QFrame[role="toolbar-card"] {
+    background: @card-bg;
+    border: 1px solid @card-border;
+    border-radius: @radius-lg;
+    padding: 10px;
+}
+
+QFrame[role="plot-area"],
+QWidget[role="plot-area"] {
+    background: @surface-sunken;
+    border: 1px solid @card-border;
+    border-radius: @radius-lg;
+}
+
+QWidget[role="side-panel"] {
+    background: @card-bg;
+    border: 1px solid @card-border;
+    border-radius: @radius-lg;
+}
+
+/* === Labels === */
+QLabel#title {
+    font-size: 16px;
+    font-weight: 700;
+    color: @text-primary;
+    letter-spacing: 0.02em;
+}
+QLabel#subtitle {
+    font-size: 12px;
+    color: @text-secondary;
+}
+QLabel#settingsTitle {
+    font-size: 14px;
+    font-weight: 700;
+    color: @text-primary;
+}
+QLabel[role="caption"] {
+    color: @text-secondary;
+    font-size: 11px;
+}
+QLabel[role="field-label"] {
+    color: @text-secondary;
+    font-size: 12px;
+    font-weight: 600;
+}
+QLabel[role="data-value"] {
+    color: @text-primary;
+    font-family: "JetBrains Mono", "Consolas", monospace;
+    font-size: 12px;
+}
+QLabel[role="status-line"] {
+    color: @info;
+    background: @surface-sunken;
+    border: 1px solid @card-border;
+    border-radius: @radius-sm;
+    padding: 5px 8px;
+    font-size: 11px;
+}
+QLabel[role="status-line"][state="info"] {
+    color: @info;
+    border-color: @card-border;
+}
+QLabel[role="status-line"][state="warn"] {
+    color: @warning;
+    border-color: @warning;
+    background: @warning-soft-bg;
+}
+QLabel[role="status-line"][state="error"] {
+    color: @error;
+    border-color: @error;
+    background: @error-soft-bg;
+}
+QLabel[role="status-line"][state="ok"] {
+    color: @success;
+    border-color: @success;
+    background: @success-soft-bg;
+}
+
+/* === Batch channel-config (map page) === */
+QTabWidget#cfgTabs::pane {
+    border: none;
+    background: transparent;
+}
+QTabWidget#cfgTabs QTabBar::tab {
+    padding: 6px 12px;
+    font-weight: 600;
+}
+QLabel[role="cmd-preview"] {
+    color: @text-secondary;
+    background: @surface-sunken;
+    border: 1px solid @card-border;
+    border-radius: @radius-sm;
+    padding: 3px 6px;
+    font-family: "JetBrains Mono", "Consolas", monospace;
+    font-size: 10px;
+}
+
+/* === Settings Popover === */
+QWidget#settingsPanel {
+    background: @card-bg;
+    border: 1px solid @card-border-hi;
+    border-bottom: 2px solid @primary;
+    border-radius: 8px;
+}
+QWidget#settingsPanel QFrame#settingsTopAccent {
+    background: @card-border-hi;
+    border: none;
+    border-radius: 1px;
+}
+QWidget#settingsPanel QLabel#settingsPanelTitle {
+    color: @text-primary;
+    font-size: 14px;
+    font-weight: 700;
+}
+QWidget#settingsPanel QLabel#settingsPanelSubtitle {
+    color: @text-secondary;
+    font-size: 11px;
+}
+QWidget#settingsPanel QWidget#settingsSectionHeader {
+    background: transparent;
+    border: none;
+    margin-top: 5px;
+}
+QWidget#settingsPanel QLabel#settingsSectionIcon {
+    min-width: 22px;
+    min-height: 22px;
+    max-width: 22px;
+    max-height: 22px;
+    border-radius: 6px;
+    background: @primary-soft-bg;
+    color: @info;
+    font-weight: 800;
+    font-size: 12px;
+}
+QWidget#settingsPanel QLabel#settingsSectionLabel {
+    color: @text-primary;
+    font-size: 12px;
+    font-weight: 700;
+    padding-left: 0;
+    padding-top: 0;
+}
+QWidget#settingsPanel QFrame#settingsSectionLine {
+    color: @card-border;
+    background: @card-border;
+    max-height: 1px;
+}
+QWidget#settingsPanel QLabel#settingsModeBadge {
+    color: @warning;
+    background: @warning-soft-bg;
+    border: 1px solid @warning;
+    border-radius: 10px;
+    padding: 2px 9px;
+    font-size: 10px;
+    font-weight: 700;
+}
+QWidget#settingsPanel QLabel#settingsModeBadge[mode="hardware"] {
+    color: @info;
+    background: @primary-soft-bg;
+    border-color: @card-border-hi;
+}
+QWidget#settingsPanel QFrame#settingsCard {
+    background: @analyzer-pane-bg;
+    border: 1px solid @card-border-hi;
+    border-radius: 7px;
+}
+QWidget#settingsPanel QLabel#settingsFieldLabel {
+    color: @text-secondary;
+    font-size: 10px;
+    font-weight: 600;
+}
+QWidget#settingsPanel QLineEdit,
+QWidget#settingsPanel QSpinBox,
+QWidget#settingsPanel QComboBox {
+    background: @input-bg;
+    color: @text-primary;
+    border: 1px solid @card-border;
+    border-radius: 3px;
+    padding: 2px 6px;
+    min-height: 24px;
+    font-size: 11px;
+    font-family: "Consolas", "Microsoft YaHei UI";
+}
+QWidget#settingsPanel QLineEdit:focus,
+QWidget#settingsPanel QSpinBox:focus,
+QWidget#settingsPanel QComboBox:focus {
+    border-color: @primary;
+}
+QWidget#settingsPanel QCheckBox#settingsLocalToggle {
+    color: @text-primary;
+    spacing: 6px;
+    font-size: 11px;
+    font-weight: 600;
+}
+QWidget#settingsPanel QCheckBox#settingsLocalToggle::indicator {
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+    border: 1px solid @card-border;
+    background: @surface-sunken;
+}
+QWidget#settingsPanel QCheckBox#settingsLocalToggle::indicator:checked {
+    background: @primary;
+    border-color: @primary;
+}
+QWidget#settingsPanel QLabel#settingsEndpointHint {
+    color: @text-secondary;
+    background: transparent;
+    border: none;
+    padding: 0;
+    font-size: 11px;
+    font-family: "JetBrains Mono", "Consolas", monospace;
+}
+QWidget#settingsPanel QFrame#settingsEndpointFrame {
+    background: @primary-soft-bg;
+    border: 1px solid @card-border-hi;
+    border-radius: 4px;
+}
+QWidget#settingsPanel QLabel#settingsEndpointDot {
+    color: @info;
+    background: transparent;
+    font-size: 10px;
+}
+QWidget#settingsPanel QLabel#settingsEndpointHint[state="warn"] {
+    color: @warning;
+    border: none;
+    background: transparent;
+}
+QWidget#settingsPanel QLabel#settingsVersionLabel {
+    color: @text-primary;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: "JetBrains Mono", "Consolas", monospace;
+}
+QWidget#settingsPanel QLabel#settingsUpdateStatus {
+    color: @text-secondary;
+    background: @surface-sunken;
+    border: 1px solid @card-border;
+    border-radius: 3px;
+    padding: 4px 6px;
+    font-size: 11px;
+}
+QWidget#settingsPanel QLabel#settingsThemeHint {
+    color: @text-secondary;
+    font-size: 10px;
+    background: transparent;
+}
+QWidget#settingsPanel QPushButton#settingsThemeSwatch {
+    min-width: 28px;
+    min-height: 28px;
+    max-width: 28px;
+    max-height: 28px;
+    padding: 0;
+}
+QWidget#settingsPanel QLabel#settingsUpdateStatus[state="ok"] {
+    color: @success;
+    border-color: @success;
+    background: @success-soft-bg;
+}
+QWidget#settingsPanel QLabel#settingsUpdateStatus[state="warn"] {
+    color: @warning;
+    border-color: @warning;
+    background: @warning-soft-bg;
+}
+QWidget#settingsPanel QPushButton#settingsCloseButton,
+QWidget#settingsPanel QPushButton#settingsSaveButton,
+QWidget#settingsPanel QPushButton#settingsConnectButton,
+QWidget#settingsPanel QPushButton#settingsCheckUpdateButton,
+QWidget#settingsPanel QPushButton#settingsOpenUpdateButton {
+    min-width: 68px;
+    min-height: 22px;
+    border-radius: 3px;
+    padding: 2px 7px;
+    font-size: 11px;
+    font-weight: 600;
+}
+QLabel[class="metric-value"] {
+    font-family: "JetBrains Mono", "Consolas", monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: @text-primary;
+}
+QLabel[class="metric-unit"] {
+    font-family: "JetBrains Mono", "Consolas", monospace;
+    font-size: 11px;
+    color: @text-secondary;
+}
+
+/* === Status Badge === */
+QLabel[class="status-badge"] {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: "JetBrains Mono", "Consolas", monospace;
+}
+QLabel[class="status-badge"][state="ok"] {
+    background: @success-soft-bg;
+    color: @success;
+}
+QLabel[class="status-badge"][state="info"] {
+    background: @hover-bg;
+    color: @text-muted;
+}
+QLabel[class="status-badge"][state="warn"] {
+    background: @warning-soft-bg;
+    color: @warning;
+}
+QLabel[class="status-badge"][state="error"] {
+    background: @error-soft-bg;
+    color: @error;
+}
+
+/* === Recording indicator pill (top status bar) === */
+/* Borderless soft pill to match the connection / timestamp badges; the pill
+   shape + soft red wash + breathing dot signal "recording" without a heavy
+   border. */
+QWidget#recChip {
+    background: @error-soft-bg;
+    border: none;
+    border-radius: 10px;
+}
+QLabel#recDot {
+    color: @error;
+    font-size: 11px;
+    background: transparent;
+    border: none;
+}
+QLabel#recText {
+    color: @text-primary;
+    font-family: "JetBrains Mono", "Consolas", monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    background: transparent;
+    border: none;
+}
+
+/* === Lists (Navigation) === */
+QListWidget {
+    background: @app-bg;
+    border: none;
+    border-right: 1px solid @card-border;
+    padding: 8px 4px;
+    outline: none;
+}
+QListWidget::item {
+    padding: 10px 12px;
+    border-radius: @radius-md;
+    margin: 2px 4px;
+    color: @text-secondary;
+    font-size: 13px;
+}
+QListWidget::item:hover {
+    background: @card-bg-elevated;
+    color: @text-primary;
+}
+QListWidget::item:selected {
+    background: @card-bg-elevated;
+    color: @primary;
+    border-left: 3px solid @primary;
+    font-weight: 600;
+}
+
+/* === Tables === */
+QTableWidget, QTableView {
+    background: @app-bg;
+    border: 1px solid @card-border;
+    border-radius: @radius-md;
+    gridline-color: @card-border;
+    color: @text-primary;
+    font-family: "JetBrains Mono", "Consolas", monospace;
+    font-size: 12px;
+}
+QHeaderView::section {
+    background: @card-bg;
+    color: @text-secondary;
+    border: none;
+    border-bottom: 1px solid @card-border;
+    padding: 6px 10px;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+}
+
+/* === ScrollBar — Minimal === */
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+    margin: 4px 1px;
+}
+QScrollBar::handle:vertical {
+    background: @card-border-hi;
+    border-radius: 4px;
+    min-height: 40px;
+}
+QScrollBar::handle:vertical:hover { background: @text-disabled; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+QScrollBar:horizontal {
+    background: transparent;
+    height: 10px;
+    margin: 1px 4px;
+}
+QScrollBar::handle:horizontal {
+    background: @card-border-hi;
+    border-radius: 4px;
+    min-width: 40px;
+}
+QScrollBar::handle:horizontal:hover { background: @text-disabled; }
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
+
+/* === PlainTextEdit (Console) === */
+QPlainTextEdit {
+    background: @console-bg;
+    color: @text-primary;
+    border: 1px solid @card-border;
+    border-radius: @radius-md;
+    font-family: "JetBrains Mono", "Consolas", monospace;
+    font-size: 12px;
+    padding: 8px;
+    selection-background-color: @selection-bg;
+}
+
+/* === Checkbox === */
+QCheckBox {
+    color: @text-primary;
+    spacing: 6px;
+}
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border: 1px solid @card-border-hi;
+    border-radius: @radius-sm;
+    background: @input-bg;
+}
+QCheckBox::indicator:hover {
+    border-color: @primary;
+}
+QCheckBox::indicator:checked {
+    background: @primary;
+    border-color: @primary;
+}
+
+/* === Tab Widget (if used) === */
+QTabWidget::pane {
+    border: 1px solid @card-border;
+    border-radius: @radius-md;
+    background: @card-bg;
+}
+QTabBar::tab {
+    background: transparent;
+    color: @text-secondary;
+    padding: 8px 16px;
+    border-bottom: 2px solid transparent;
+    font-size: 12px;
+    font-weight: 500;
+}
+QTabBar::tab:selected {
+    color: @primary;
+    border-bottom-color: @primary;
+}
+QTabBar::tab:hover {
+    color: @text-primary;
+}
+
+/* === V6 Layout: persistent SPI pane and horizontal page tabs === */
+QFrame#v5PageTabs {
+    background: @surface-panel;
+    border-top: 1px solid @card-border;
+    border-bottom: 1px solid @card-border-hi;
+}
+QPushButton#pageTab {
+    background: transparent;
+    color: @text-secondary;
+    border: 1px solid transparent;
+    border-bottom: 3px solid transparent;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    min-width: 92px;
+    min-height: 42px;
+    padding: 0 20px;
+    font-size: 13px;
+    font-weight: 600;
+}
+QPushButton#pageTab:hover {
+    color: @text-primary;
+    background: @tab-hover-bg;
+    border-color: @card-border;
+    border-bottom-color: transparent;
+}
+QPushButton#pageTab:checked {
+    color: @text-primary;
+    border-color: @card-border-hi;
+    border-bottom-color: @primary-hover;
+    background: @card-bg-elevated;
+    font-weight: 700;
+}
+
+/* Secondary (left-pane) segmented sub-tabs — compact, subtle */
+QPushButton#paneSubTab {
+    background: @surface-control;
+    color: @text-secondary;
+    border: 1px solid @card-border;
+    border-radius: @radius-sm;
+    min-height: 24px;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 500;
+}
+QPushButton#paneSubTab:hover {
+    color: @text-primary;
+    background: @tab-hover-bg;
+    border-color: @card-border-hi;
+}
+QPushButton#paneSubTab:checked {
+    color: @primary;
+    background: @primary-soft-bg;
+    border-color: @primary;
+    font-weight: 600;
+}
+
+/* === Global session toolbar === */
+QWidget#sessionToolbar {
+    background: @surface-panel;
+    border-bottom: 1px solid @card-border-hi;
+}
+QWidget#sessionToolbar QComboBox {
+    min-height: 26px;
+    min-width: 88px;
+}
+/* Same compact scale as the record chip so the row reads as one family. */
+QWidget#sessionToolbar QPushButton[variant="primary"],
+QWidget#sessionToolbar QPushButton[variant="danger"],
+QWidget#sessionToolbar QPushButton[variant="secondary"] {
+    min-height: 22px;
+    padding: 4px 16px;
+    font-weight: 600;
+}
+QPushButton#transportBtn {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 15px;
+    padding: 0;
+}
+QPushButton#transportBtn:hover { background: @card-bg-elevated; border-color: @card-border; }
+QPushButton#transportBtn:pressed { background: @primary-soft-bg; border-color: @primary; }
+QPushButton#transportBtn:disabled { background: transparent; border-color: transparent; }
+/* Primary transport action: solid blue circular play/pause */
+QPushButton#transportPlay {
+    background: @primary;
+    border: none;
+    border-radius: 15px;
+    padding: 0;
+}
+QPushButton#transportPlay:hover { background: @primary-hover; }
+QPushButton#transportPlay:pressed { background: @primary-active; }
+QPushButton#transportPlay:disabled { background: @card-border; }
+
+/* Segmented mode switch (实时 | 回放) */
+QFrame#segmented {
+    background: @input-bg;
+    border: 1px solid @card-border;
+    border-radius: @radius-md;
+}
+QPushButton#segItem {
+    background: transparent;
+    color: @text-secondary;
+    border: none;
+    border-radius: @radius-sm;
+    padding: 4px 16px;
+    min-height: 22px;
+    font-weight: 600;
+}
+QPushButton#segItem:hover { color: @text-primary; }
+/* Softer than a full-blue fill so the primary action button stays the only
+   strong accent — reads as a selected pill without competing. */
+QPushButton#segItem:checked { background: @primary-soft-bg; color: @primary; }
+
+/* Connection dot next to the receive button */
+QLabel#connDot { font-weight: 600; }
+QLabel#connDot[state="info"] { color: @text-muted; }
+QLabel#connDot[state="ok"] { color: @success; }
+QLabel#connDot[state="warn"] { color: @warning; }
+QLabel#connDot[state="error"] { color: @error; }
+
+/* Loaded-file chip: filename + × */
+QFrame#fileChip {
+    background: @card-bg-elevated;
+    border: 1px solid @card-border-hi;
+    border-radius: @radius-md;
+}
+QLabel#fileChipName {
+    color: @text-primary;
+    font-family: "JetBrains Mono", "Consolas", monospace;
+    font-size: 11px;
+}
+QPushButton#fileChipClose {
+    background: transparent;
+    color: @text-secondary;
+    border: none;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 0;
+}
+QPushButton#fileChipClose:hover { background: @error-soft-bg; color: @error; }
+
+/* Record chip: danger-styled, its own zone */
+QPushButton#recordChip {
+    background: transparent;
+    color: @error;
+    border: 1px solid @error;
+    border-radius: @radius-md;
+    padding: 4px 16px;
+    min-height: 22px;
+    font-weight: 600;
+}
+QPushButton#recordChip:hover { background: @error-soft-bg; }
+QPushButton#recordChip[recording="true"] {
+    background: @error;
+    color: #ffffff;
+    border-color: @error;
+}
+QPushButton#recordChip:disabled {
+    color: @text-disabled;
+    border-color: @card-border;
+    background: transparent;
+}
+QWidget#sessionToolbar QSlider::groove:horizontal {
+    height: 4px; background: @card-border; border-radius: 2px;
+}
+QWidget#sessionToolbar QSlider::handle:horizontal {
+    width: 12px; height: 12px; margin: -5px 0; border-radius: 6px; background: @primary;
+}
+QWidget#sessionToolbar QSlider::sub-page:horizontal { background: @primary; border-radius: 2px; }
+QFrame#toolbarSep {
+    color: @card-border-hi;
+    margin: 0 6px;
+}
+QWidget#sessionToolbar QLabel[role="field-label"] {
+    color: @text-secondary;
+    font-weight: 600;
+    margin-right: 2px;
+}
+QWidget#sessionToolbar QLabel[role="caption"][state="ok"] {
+    color: @success;
+    font-weight: 600;
+}
+
+QFrame#persistentSpiPane {
+    background: @surface-panel;
+    border-right: 1px solid @card-border;
+}
+QLabel#spiPaneTitle {
+    color: @text-primary;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 8px 10px 0 10px;
+}
+QLabel#spiPaneSubtitle {
+    color: @text-secondary;
+    padding: 0 10px 8px 10px;
+}
+
+/* === Compact persistent SPI controls === */
+QWidget#spiControlPanel {
+    background: @surface-panel;
+    color: @text-primary;
+    font-size: 11px;
+}
+QWidget#spiControlPanel QScrollArea {
+    border: 0;
+    background: transparent;
+}
+QWidget#spiControlPanel QGroupBox {
+    background: @card-bg;
+    border: 1px solid @card-border;
+    border-radius: 5px;
+    margin-top: 7px;
+    padding: 7px 6px 5px 6px;
+    color: @warning;
+    font-weight: 700;
+}
+QWidget#spiControlPanel QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 7px;
+    padding: 0 3px;
+}
+QWidget#spiControlPanel QPushButton {
+    background: @surface-control;
+    color: @text-primary;
+    border: 1px solid @card-border;
+    border-radius: 3px;
+    min-height: 19px;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-weight: 600;
+}
+QWidget#spiControlPanel QPushButton:hover {
+    background: @tab-hover-bg;
+    border-color: @primary;
+    color: @text-primary;
+}
+QWidget#spiControlPanel QPushButton:pressed {
+    background: @tab-active-bg;
+}
+QWidget#spiControlPanel QPushButton[variant="primary"] {
+    background: @primary;
+    color: @text-on-primary;
+    border-color: @primary;
+    font-weight: 700;
+}
+QWidget#spiControlPanel QPushButton[variant="primary"]:hover {
+    background: @primary-hover;
+    border-color: @primary-hover;
+    color: @text-on-primary;
+}
+QWidget#spiControlPanel QPushButton[variant="danger"] {
+    background: transparent;
+    color: @error;
+    border-color: @error;
+}
+QWidget#spiControlPanel QPushButton[variant="danger"]:hover {
+    background: @error-soft-bg;
+    color: @error;
+}
+QWidget#spiControlPanel QPushButton[variant="secondary"] {
+    background: @card-bg;
+    color: @text-secondary;
+    border-color: @card-border;
+}
+QWidget#spiControlPanel QLineEdit,
+QWidget#spiControlPanel QComboBox {
+    background: @input-bg;
+    color: @text-primary;
+    border: 1px solid @card-border;
+    border-radius: 3px;
+    min-height: 19px;
+    padding: 1px 5px;
+    font-family: "Consolas", "Microsoft YaHei UI";
+    font-size: 11px;
+}
+QWidget#spiControlPanel QLabel {
+    color: @text-secondary;
+    background: transparent;
+    font-size: 11px;
+}
+QWidget#spiControlPanel QPlainTextEdit {
+    background: @console-bg;
+    color: @text-primary;
+    border: 1px solid @card-border;
+    border-radius: 3px;
+    font-family: "Consolas";
+    font-size: 10px;
+}
+
+/* === Compact instrument controls: analyzer / realtime / channel map / SPI === */
+QWidget[role="page-control-panel"],
+QFrame[role="page-control-panel"],
+QWidget#spiControlPanel {
+    background: transparent;
+    border: none;
+}
+
+QScrollArea#analyzerControlPanel {
+    background: @analyzer-pane-bg;
+    border-right: 1px solid @card-border;
+}
+QScrollArea#analyzerControlPanel QWidget,
+QWidget[role="page-control-panel"] QWidget,
+QFrame[role="page-control-panel"] QWidget,
+QWidget#spiControlPanel QWidget {
+    background: @analyzer-pane-bg;
+    color: @text-primary;
+    font-size: 11px;
+}
+QScrollArea#analyzerControlPanel QGroupBox,
+QWidget[role="page-control-panel"] QGroupBox,
+QFrame[role="page-control-panel"] QGroupBox,
+QWidget#spiControlPanel QGroupBox {
+    background: @card-bg;
+    border: 1px solid @card-border;
+    border-radius: @radius-sm;
+    margin-top: 8px;
+    padding: 8px 7px 6px 7px;
+    color: @violet;
+    font-weight: 700;
+}
+QScrollArea#analyzerControlPanel QGroupBox::title,
+QWidget[role="page-control-panel"] QGroupBox::title,
+QFrame[role="page-control-panel"] QGroupBox::title,
+QWidget#spiControlPanel QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 8px;
+    padding: 0 3px;
+    color: @violet;
+    font-size: 11px;
+}
+QScrollArea#analyzerControlPanel QLabel,
+QWidget[role="page-control-panel"] QLabel,
+QFrame[role="page-control-panel"] QLabel,
+QWidget#spiControlPanel QLabel {
+    color: @text-secondary;
+    background: transparent;
+    font-size: 11px;
+}
+QScrollArea#analyzerControlPanel QLineEdit,
+QScrollArea#analyzerControlPanel QSpinBox,
+QScrollArea#analyzerControlPanel QDoubleSpinBox,
+QScrollArea#analyzerControlPanel QComboBox,
+QWidget[role="page-control-panel"] QLineEdit,
+QWidget[role="page-control-panel"] QSpinBox,
+QWidget[role="page-control-panel"] QDoubleSpinBox,
+QWidget[role="page-control-panel"] QComboBox,
+QFrame[role="page-control-panel"] QLineEdit,
+QFrame[role="page-control-panel"] QSpinBox,
+QFrame[role="page-control-panel"] QDoubleSpinBox,
+QFrame[role="page-control-panel"] QComboBox,
+QWidget#spiControlPanel QLineEdit,
+QWidget#spiControlPanel QSpinBox,
+QWidget#spiControlPanel QDoubleSpinBox,
+QWidget#spiControlPanel QComboBox {
+    background: @input-bg;
+    color: @text-primary;
+    border: 1px solid @card-border;
+    border-radius: 3px;
+    min-height: 22px;
+    padding: 2px 6px;
+    font-family: "Consolas", "Microsoft YaHei UI";
+}
+QWidget[role="page-control-panel"] QPlainTextEdit,
+QWidget[role="page-control-panel"] QListWidget,
+QFrame[role="page-control-panel"] QPlainTextEdit,
+QFrame[role="page-control-panel"] QListWidget,
+QWidget#spiControlPanel QPlainTextEdit,
+QWidget#spiControlPanel QListWidget {
+    background: @input-bg;
+    color: @text-primary;
+    border: 1px solid @card-border;
+    border-radius: 3px;
+    padding: 3px 6px;
+    font-family: "Consolas", "Microsoft YaHei UI";
+    font-size: 11px;
+}
+QScrollArea#analyzerControlPanel QLineEdit:focus,
+QScrollArea#analyzerControlPanel QSpinBox:focus,
+QScrollArea#analyzerControlPanel QDoubleSpinBox:focus,
+QScrollArea#analyzerControlPanel QComboBox:focus,
+QWidget[role="page-control-panel"] QLineEdit:focus,
+QWidget[role="page-control-panel"] QSpinBox:focus,
+QWidget[role="page-control-panel"] QDoubleSpinBox:focus,
+QWidget[role="page-control-panel"] QComboBox:focus,
+QFrame[role="page-control-panel"] QLineEdit:focus,
+QFrame[role="page-control-panel"] QSpinBox:focus,
+QFrame[role="page-control-panel"] QDoubleSpinBox:focus,
+QFrame[role="page-control-panel"] QComboBox:focus,
+QWidget#spiControlPanel QLineEdit:focus,
+QWidget#spiControlPanel QSpinBox:focus,
+QWidget#spiControlPanel QDoubleSpinBox:focus,
+QWidget#spiControlPanel QComboBox:focus {
+    border-color: @primary;
+}
+QScrollArea#analyzerControlPanel QPushButton,
+QWidget[role="page-control-panel"] QPushButton,
+QFrame[role="page-control-panel"] QPushButton,
+QWidget#spiControlPanel QPushButton {
+    background: @surface-control;
+    color: @text-primary;
+    border: 1px solid @card-border;
+    border-radius: 3px;
+    min-height: 22px;
+    padding: 2px 7px;
+    font-weight: 600;
+}
+QScrollArea#analyzerControlPanel QPushButton:hover,
+QWidget[role="page-control-panel"] QPushButton:hover,
+QFrame[role="page-control-panel"] QPushButton:hover,
+QWidget#spiControlPanel QPushButton:hover {
+    background: @tab-hover-bg;
+    border-color: @primary;
+    color: @text-primary;
+}
+QScrollArea#analyzerControlPanel QPushButton[variant="primary"],
+QWidget[role="page-control-panel"] QPushButton[variant="primary"],
+QFrame[role="page-control-panel"] QPushButton[variant="primary"],
+QWidget#spiControlPanel QPushButton[variant="primary"] {
+    background: @primary;
+    color: @text-on-primary;
+    border-color: @primary;
+    font-weight: 700;
+}
+QScrollArea#analyzerControlPanel QPushButton[variant="primary"]:hover,
+QWidget[role="page-control-panel"] QPushButton[variant="primary"]:hover,
+QFrame[role="page-control-panel"] QPushButton[variant="primary"]:hover,
+QWidget#spiControlPanel QPushButton[variant="primary"]:hover {
+    background: @primary-hover;
+    border-color: @primary-hover;
+    color: @text-on-primary;
+}
+QScrollArea#analyzerControlPanel QPushButton[variant="secondary"],
+QWidget[role="page-control-panel"] QPushButton[variant="secondary"],
+QFrame[role="page-control-panel"] QPushButton[variant="secondary"],
+QWidget#spiControlPanel QPushButton[variant="secondary"] {
+    background: @card-bg;
+    color: @text-secondary;
+    border-color: @card-border;
+}
+QScrollArea#analyzerControlPanel QPushButton[variant="secondary"]:hover,
+QWidget[role="page-control-panel"] QPushButton[variant="secondary"]:hover,
+QFrame[role="page-control-panel"] QPushButton[variant="secondary"]:hover,
+QWidget#spiControlPanel QPushButton[variant="secondary"]:hover {
+    background: @card-bg-elevated;
+    color: @text-primary;
+    border-color: @card-border-hi;
+}
+QScrollArea#analyzerControlPanel QPushButton[variant="danger"],
+QWidget[role="page-control-panel"] QPushButton[variant="danger"],
+QFrame[role="page-control-panel"] QPushButton[variant="danger"],
+QWidget#spiControlPanel QPushButton[variant="danger"] {
+    background: transparent;
+    color: @error;
+    border-color: @error;
+}
+QScrollArea#analyzerControlPanel QPushButton[variant="danger"]:hover,
+QWidget[role="page-control-panel"] QPushButton[variant="danger"]:hover,
+QFrame[role="page-control-panel"] QPushButton[variant="danger"]:hover,
+QWidget#spiControlPanel QPushButton[variant="danger"]:hover {
+    background: @error-soft-bg;
+    color: @error;
+}
+QScrollArea#analyzerControlPanel QCheckBox,
+QWidget[role="page-control-panel"] QCheckBox,
+QFrame[role="page-control-panel"] QCheckBox,
+QWidget#spiControlPanel QCheckBox {
+    spacing: 5px;
+    color: @text-primary;
+    background: transparent;
+}
+QScrollArea#analyzerControlPanel QCheckBox::indicator,
+QWidget[role="page-control-panel"] QCheckBox::indicator,
+QFrame[role="page-control-panel"] QCheckBox::indicator,
+QWidget#spiControlPanel QCheckBox::indicator {
+    width: 13px;
+    height: 13px;
+    border: 1px solid @card-border;
+    border-radius: 3px;
+    background: @input-bg;
+}
+QScrollArea#analyzerControlPanel QCheckBox::indicator:checked,
+QWidget[role="page-control-panel"] QCheckBox::indicator:checked,
+QFrame[role="page-control-panel"] QCheckBox::indicator:checked,
+QWidget#spiControlPanel QCheckBox::indicator:checked {
+    background: @primary;
+    border-color: @primary;
+}
+
+QScrollArea#analyzerControlPanel QLabel[role="status-line"],
+QWidget[role="page-control-panel"] QLabel[role="status-line"],
+QFrame[role="page-control-panel"] QLabel[role="status-line"],
+QWidget#spiControlPanel QLabel[role="status-line"] {
+    color: @info;
+    background: @surface-sunken;
+    border: 1px solid @card-border;
+    border-radius: @radius-sm;
+    padding: 5px 7px;
+    font-size: 11px;
+}
+QScrollArea#analyzerControlPanel QLabel[role="status-line"][state="info"],
+QWidget[role="page-control-panel"] QLabel[role="status-line"][state="info"],
+QFrame[role="page-control-panel"] QLabel[role="status-line"][state="info"],
+QWidget#spiControlPanel QLabel[role="status-line"][state="info"] {
+    color: @info;
+    border-color: @card-border;
+}
+QScrollArea#analyzerControlPanel QLabel[role="status-line"][state="warn"],
+QWidget[role="page-control-panel"] QLabel[role="status-line"][state="warn"],
+QFrame[role="page-control-panel"] QLabel[role="status-line"][state="warn"],
+QWidget#spiControlPanel QLabel[role="status-line"][state="warn"] {
+    color: @warning;
+    border-color: @warning;
+    background: @warning-soft-bg;
+}
+QScrollArea#analyzerControlPanel QLabel[role="status-line"][state="error"],
+QWidget[role="page-control-panel"] QLabel[role="status-line"][state="error"],
+QFrame[role="page-control-panel"] QLabel[role="status-line"][state="error"],
+QWidget#spiControlPanel QLabel[role="status-line"][state="error"] {
+    color: @error;
+    border-color: @error;
+    background: @error-soft-bg;
+}
+QScrollArea#analyzerControlPanel QLabel[role="status-line"][state="ok"],
+QWidget[role="page-control-panel"] QLabel[role="status-line"][state="ok"],
+QFrame[role="page-control-panel"] QLabel[role="status-line"][state="ok"],
+QWidget#spiControlPanel QLabel[role="status-line"][state="ok"] {
+    color: @success;
+    border-color: @success;
+    background: @success-soft-bg;
+}
+
+QLabel#fftStatsTitle {
+    font-weight: 700;
+    color: @violet;
+    padding: 6px 0;
+}

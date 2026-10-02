@@ -1,0 +1,60 @@
+/* tokens-light.qss — 浅色主题 (Clean Lab Light) */
+/* Crisp neutral light surfaces, calibrated blue accent, soft borders. */
+
+/* Surfaces */
+@app-bg: #EEF1F5;
+@app-bg-grad-end: #E6EAF0;
+@card-bg: #FFFFFF;
+@card-bg-elevated: #F7F9FC;
+@card-border: #D5DBE3;
+@card-border-hi: #9AA4B2;
+@surface-sunken: #E7EBF1;
+@surface-panel: #F6F8FB;
+@surface-control: #EEF2F7;
+@input-bg: #FFFFFF;
+@console-bg: #F7F9FC;
+@tab-bg: #E9EEF4;
+@tab-hover-bg: #F4F7FB;
+@tab-active-bg: #FFFFFF;
+@analyzer-pane-bg: #F1F4F9;
+
+/* Brand / Accent — calibrated blue */
+@primary: #2F6FE0;
+@primary-hover: #2560C8;
+@primary-press: #1E50AC;
+@primary-soft-bg: rgba(47, 111, 224, 0.08);
+@primary-press-bg: rgba(47, 111, 224, 0.15);
+@selection-bg: rgba(47, 111, 224, 0.20);
+@secondary: #5F6B7C;
+@violet: #7C4DDC;
+
+/* Status */
+@success: #1C9D57;
+@warning: #C9810B;
+@error: #D83A3A;
+@info: #0E8FA8;
+@success-soft-bg: rgba(28, 157, 87, 0.10);
+@warning-soft-bg: rgba(201, 129, 11, 0.11);
+@error-soft-bg: rgba(216, 58, 58, 0.10);
+@error-press-bg: rgba(216, 58, 58, 0.16);
+
+/* Text */
+@text-primary: #1A2230;
+@text-secondary: #4A5568;
+@text-disabled: #98A2B0;
+@text-on-primary: #FFFFFF;
+
+/* Plot */
+@plot-bg: #FBFCFE;
+@plot-grid: #DDE4ED;
+@plot-axis: #3A4555;
+@plot-wave: #2F6FE0;
+
+/* Spacing / Radius */
+@radius-sm: 4px;
+@radius-md: 6px;
+@radius-lg: 8px;
+@gap-xs: 4px;
+@gap-sm: 8px;
+@gap-md: 12px;
+@gap-lg: 16px;

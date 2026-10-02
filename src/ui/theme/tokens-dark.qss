@@ -1,0 +1,61 @@
+/* tokens-dark.qss — 精密仪器高级灰 (Precision Instrument Graphite) */
+/* Neutral graphite surfaces, single restrained steel-blue accent.   */
+/* Keysight / Tektronix / Blackmagic console feel — low fatigue.      */
+
+/* Background layers — neutral charcoal, faintly cool */
+@app-bg: #15171A;
+@app-bg-grad-end: #1A1D21;
+@card-bg: #1B1E22;
+@card-bg-elevated: #23272D;
+@card-border: #31363D;
+@card-border-hi: #4B525B;
+@surface-sunken: #121417;
+@surface-panel: #181B1F;
+@surface-control: #22262C;
+@input-bg: #131518;
+@console-bg: #0F1113;
+@tab-bg: #15181C;
+@tab-hover-bg: #1E2227;
+@tab-active-bg: #1A1D22;
+@analyzer-pane-bg: #17191D;
+
+/* Brand / Accent — restrained steel blue */
+@primary: #4D8FE8;
+@primary-hover: #6BA5F0;
+@primary-press: #3B79CC;
+@primary-soft-bg: rgba(77, 143, 232, 0.08);
+@primary-press-bg: rgba(77, 143, 232, 0.16);
+@selection-bg: rgba(77, 143, 232, 0.28);
+@secondary: #9098A3;
+@violet: #A98EDB;
+
+/* Status — functional, slightly desaturated */
+@success: #4CB782;
+@warning: #D8A23B;
+@error: #E5675E;
+@info: #4FB6C4;
+@success-soft-bg: rgba(76, 183, 130, 0.14);
+@warning-soft-bg: rgba(216, 162, 59, 0.14);
+@error-soft-bg: rgba(229, 103, 94, 0.14);
+@error-press-bg: rgba(229, 103, 94, 0.22);
+
+/* Text — high contrast, neutral, WCAG AA */
+@text-primary: #E8EAED;
+@text-secondary: #A8B0BA;
+@text-disabled: #646C76;
+@text-on-primary: #FFFFFF;
+
+/* Plot — deep neutral, data-first */
+@plot-bg: #131518;
+@plot-grid: #262B31;
+@plot-axis: #8A929C;
+@plot-wave: #4FB6C4;
+
+/* Spacing / Radius */
+@radius-sm: 4px;
+@radius-md: 6px;
+@radius-lg: 8px;
+@gap-xs: 4px;
+@gap-sm: 8px;
+@gap-md: 12px;
+@gap-lg: 16px;

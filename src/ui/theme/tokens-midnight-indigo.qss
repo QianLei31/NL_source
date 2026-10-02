@@ -1,0 +1,61 @@
+/* tokens-midnight-indigo.qss — 现代科技深色 (Modern Tech Deep Blue) */
+/* Translucent deep navy / graphite base with vivid cyan-green accent. */
+/* Modern SaaS dashboard / Linear / Vercel energy, premium glow.        */
+
+/* Background layers — deep indigo-navy */
+@app-bg: #0B1020;
+@app-bg-grad-end: #111733;
+@card-bg: #141B33;
+@card-bg-elevated: #1C2647;
+@card-border: #2A3658;
+@card-border-hi: #43527E;
+@surface-sunken: #080C1A;
+@surface-panel: #0E1428;
+@surface-control: #18203C;
+@input-bg: #0C1124;
+@console-bg: #070A18;
+@tab-bg: #0D1226;
+@tab-hover-bg: #18203C;
+@tab-active-bg: #141B33;
+@analyzer-pane-bg: #0F1530;
+
+/* Brand / Accent — electric cyan-green (emerald teal) */
+@primary: #2BE0AE;
+@primary-hover: #55ECC2;
+@primary-press: #1FC096;
+@primary-soft-bg: rgba(43, 224, 174, 0.08);
+@primary-press-bg: rgba(43, 224, 174, 0.16);
+@selection-bg: rgba(43, 224, 174, 0.24);
+@secondary: #7E8CB0;
+@violet: #9D86FF;
+
+/* Status */
+@success: #2EE6A0;
+@warning: #FFB454;
+@error: #FF6B6B;
+@info: #46C8FF;
+@success-soft-bg: rgba(46, 230, 160, 0.12);
+@warning-soft-bg: rgba(255, 180, 84, 0.12);
+@error-soft-bg: rgba(255, 107, 107, 0.12);
+@error-press-bg: rgba(255, 107, 107, 0.20);
+
+/* Text — cool blue-white */
+@text-primary: #E4EAF4;
+@text-secondary: #93A1C0;
+@text-disabled: #54618A;
+@text-on-primary: #06121A;
+
+/* Plot — deep indigo with cyan grid */
+@plot-bg: #080D1C;
+@plot-grid: #1E2A4C;
+@plot-axis: #66769F;
+@plot-wave: #2BE0AE;
+
+/* Spacing / Radius */
+@radius-sm: 5px;
+@radius-md: 8px;
+@radius-lg: 10px;
+@gap-xs: 4px;
+@gap-sm: 8px;
+@gap-md: 12px;
+@gap-lg: 16px;

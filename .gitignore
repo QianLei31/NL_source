@@ -1,0 +1,44 @@
+# Local builds, deployments, and recorded data.
+/build/
+/build-*/
+/builds/
+/dist/
+/release/
+/logs/
+docs/build_log.txt
+**/CMakeFiles/
+CMakeCache.txt
+Testing/
+*.exe
+*.dll
+*.obj
+*.o
+*.a
+*.pdb
+*.ilk
+*.zip
+*.7z
+*.bin
+*.ns6
+*.mat
+*.log
+
+# Machine-specific settings and activation data.
+CMakeUserPresets.json
+config.ini
+license_cache.json
+device_fingerprint.txt
+.env
+.env.*
+*.pem
+*.key
+
+# Editor and Python caches.
+.vs/
+.vscode/
+.idea/
+__pycache__/
+*.pyc
+*.user
+Thumbs.db
+.DS_Store
